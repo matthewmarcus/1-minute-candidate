@@ -29,7 +29,7 @@ export default function CandidateDashboard() {
           Manage your candidate profile, office information, and bio.
         </Text>
         <Link href="/(candidate)/profile" asChild>
-          <TouchableOpacity style={[styles.button, styles.buttonSecondary]}>
+          <TouchableOpacity style={styles.buttonOutline}>
             <Text style={styles.buttonTextSecondary}>Edit Profile</Text>
           </TouchableOpacity>
         </Link>
@@ -41,7 +41,7 @@ export default function CandidateDashboard() {
           Manage your candidate subscription to keep your profile active.
         </Text>
         <Link href="/(candidate)/subscribe" asChild>
-          <TouchableOpacity style={[styles.button, styles.buttonSecondary]}>
+          <TouchableOpacity style={styles.buttonOutline}>
             <Text style={styles.buttonTextSecondary}>Manage Subscription</Text>
           </TouchableOpacity>
         </Link>
@@ -102,8 +102,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
-  buttonSecondary: {
+  buttonOutline: {
     backgroundColor: 'transparent',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
     borderWidth: 1.5,
     borderColor: Colors.primary,
   },
