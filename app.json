@@ -1,0 +1,62 @@
+{
+  "expo": {
+    "name": "1 Minute Candidate",
+    "slug": "1-minute-candidate",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "1minutecandidate",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1a237e"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.60secondz.1minutecandidate",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Camera access is required to record your 60-second candidate video.",
+        "NSMicrophoneUsageDescription": "Microphone access is required to record your 60-second candidate video.",
+        "NSLocationWhenInUseUsageDescription": "Location access helps identify candidates on your ballot."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#1a237e"
+      },
+      "package": "com.sixtysecondzllc.oneminutecandidate",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow 1 Minute Candidate to access your camera for recording.",
+          "microphonePermission": "Allow 1 Minute Candidate to access your microphone for recording."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow 1 Minute Candidate to use your location to find candidates on your ballot."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
