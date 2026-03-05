@@ -1,10 +1,13 @@
-import { Stack, Redirect } from 'expo-router';
+import { Stack, Redirect, useSegments } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { Colors } from '@/constants/Colors';
 
+const PUBLIC_ROUTES = ['login', 'register'];
+
 export default function CandidateLayout() {
   const { session, loading } = useAuth();
+  const segments = useSegments();
 
   if (loading) {
     return (
@@ -14,7 +17,8 @@ export default function CandidateLayout() {
     );
   }
 
-  if (!session) {
+  const currentSegment = segments[segments.length - 1];
+  if (!session && !PUBLIC_ROUTES.includes(currentSegment)) {
     return <Redirect href="/(candidate)/login" />;
   }
 
