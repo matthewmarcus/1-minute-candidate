@@ -29,34 +29,29 @@ export default function CandidateRegister() {
 
     setLoading(true);
 
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    // Form data is passed via options.data and stored in raw_user_meta_data.
+    // A SECURITY DEFINER trigger (handle_new_candidate_user) reads this metadata
+    // and inserts the candidates row atomically — bypassing RLS even when email
+    // confirmation is required and there is no active session yet.
+    const { error: authError } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
+      options: {
+        data: {
+          name: form.name,
+          office_sought: form.officeSOught,
+          party: form.party,
+          state: form.state,
+          district: form.district,
+          bio: form.bio,
+        },
+      },
     });
 
     if (authError) {
       setLoading(false);
       Alert.alert('Registration Failed', authError.message);
       return;
-    }
-
-    if (authData.user) {
-      const { error: profileError } = await supabase.from('candidates').insert({
-        id: authData.user.id,
-        name: form.name,
-        email: form.email,
-        office_sought: form.officeSOught,
-        party: form.party || null,
-        state: form.state || null,
-        district: form.district || null,
-        bio: form.bio || null,
-      });
-
-      if (profileError) {
-        setLoading(false);
-        Alert.alert('Error', 'Account created but profile setup failed. Please contact support.');
-        return;
-      }
     }
 
     setLoading(false);
