@@ -36,6 +36,12 @@ export default function ReviewVideoScreen() {
 
   async function updateStatus(status: 'approved' | 'rejected') {
     if (!video) return;
+
+    if (status === 'rejected' && !reviewNotes.trim()) {
+      Alert.alert('Notes Required', 'Please provide a reason for rejecting this video.');
+      return;
+    }
+
     setSubmitting(true);
 
     const updates: Record<string, unknown> = {
@@ -106,7 +112,7 @@ export default function ReviewVideoScreen() {
       </View>
 
       <View style={styles.reviewSection}>
-        <Text style={styles.reviewLabel}>Review Notes (optional)</Text>
+        <Text style={styles.reviewLabel}>Review Notes <Text style={styles.reviewLabelHint}>(required if rejecting)</Text></Text>
         <TextInput
           style={styles.reviewInput}
           value={reviewNotes}
@@ -191,6 +197,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: Colors.text,
     marginBottom: 8,
+  },
+  reviewLabelHint: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: Colors.textSecondary,
   },
   reviewInput: {
     backgroundColor: Colors.card,
