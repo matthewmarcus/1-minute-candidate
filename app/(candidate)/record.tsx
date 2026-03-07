@@ -178,6 +178,28 @@ export default function RecordScreen() {
       return;
     }
 
+    // Notify the candidate via email — fire and forget; errors must not block submission.
+    (async () => {
+      try {
+        const candidateEmail = session.user.email;
+        const { data: profile } = await supabase
+          .from('candidates')
+          .select('name')
+          .eq('id', candidateId)
+          .single();
+        const candidateName = profile?.name ?? candidateEmail ?? 'Candidate';
+
+        const { error: fnError } = await supabase.functions.invoke('notify-candidate', {
+          body: { candidate_email: candidateEmail, candidate_name: candidateName, status: 'submitted' },
+        });
+        if (fnError) {
+          console.error('[notify-candidate] Edge Function error:', fnError.message);
+        }
+      } catch (notifyErr) {
+        console.error('[notify-candidate] Unexpected error:', notifyErr);
+      }
+    })();
+
     Alert.alert(
       'Video Submitted',
       'Your video has been submitted for review. You will be notified once it is approved.',
