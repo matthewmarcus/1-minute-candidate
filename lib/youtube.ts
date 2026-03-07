@@ -67,7 +67,7 @@ export async function uploadVideoToYouTube(
       categoryId: '25', // News & Politics
     },
     status: {
-      privacyStatus: 'public',
+      privacyStatus: 'unlisted',
     },
   };
 
