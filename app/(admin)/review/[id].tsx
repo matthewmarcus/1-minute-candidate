@@ -5,7 +5,6 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { Colors } from '@/constants/Colors';
 import type { Video } from '@/lib/types';
-import { uploadVideoToYouTube } from '@/lib/youtube';
 
 type VideoWithCandidate = Video & {
   candidates: { name: string; office_sought: string; email: string } | null;
@@ -113,35 +112,33 @@ export default function ReviewVideoScreen() {
       };
 
       if (status === 'approved') {
-        // Step 1: get a fresh signed URL for the video file.
         if (!video.storage_path) {
           throw new Error('This video has no storage path — cannot upload to YouTube.');
         }
 
-        setUploadStep('Generating download link…');
-        const { data: signedData, error: signedError } = await supabaseAdmin.storage
-          .from('candidate-videos')
-          .createSignedUrl(video.storage_path, 300); // 5-minute window is enough for the upload
-
-        if (signedError || !signedData?.signedUrl) {
-          throw new Error(signedError?.message ?? 'Failed to generate signed URL.');
-        }
-
-        // Step 2: upload to YouTube.
+        // Upload via server-side Edge Function so OAuth credentials stay secret.
         setUploadStep('Uploading to YouTube…');
-        const candidateName = video.candidates?.name ?? 'Candidate';
-        const officeTitle = video.candidates?.office_sought ?? '';
-        const youtubeTitle = officeTitle
-          ? `${candidateName} — ${officeTitle}`
-          : candidateName;
-
-        const { videoId, videoUrl } = await uploadVideoToYouTube(
-          signedData.signedUrl,
-          youtubeTitle,
+        const { data: fnData, error: fnError } = await supabaseAdmin.functions.invoke(
+          'upload-to-youtube',
+          {
+            body: {
+              storage_path: video.storage_path,
+              candidate_name: video.candidates?.name ?? 'Candidate',
+              office_sought: video.candidates?.office_sought ?? '',
+            },
+          },
         );
 
-        updates.youtube_video_id = videoId;
-        updates.youtube_url = videoUrl;
+        if (fnError) {
+          throw new Error(fnError.message ?? 'Edge Function error during YouTube upload.');
+        }
+
+        if (!fnData?.youtube_video_id) {
+          throw new Error(fnData?.error ?? 'YouTube upload failed — no video ID returned.');
+        }
+
+        updates.youtube_video_id = fnData.youtube_video_id;
+        updates.youtube_url = fnData.youtube_url;
         updates.approved_at = new Date().toISOString();
       }
 
