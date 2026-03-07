@@ -22,6 +22,7 @@ export interface Video {
   candidate_id: string;
   youtube_video_id: string | null;
   youtube_url: string | null;
+  storage_path: string | null;
   status: VideoStatus;
   review_notes: string | null;
   submitted_at: string | null;

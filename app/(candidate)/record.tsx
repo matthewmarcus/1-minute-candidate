@@ -68,10 +68,29 @@ export default function RecordScreen() {
 
     setSubmitting(true);
 
+    // Upload video file to Supabase Storage
+    const candidateId = session.user.id;
+    const filename = `${Date.now()}.mp4`;
+    const storagePath = `${candidateId}/${filename}`;
+
+    const response = await fetch(videoUri);
+    const blob = await response.blob();
+
+    const { error: uploadError } = await supabase.storage
+      .from('candidate-videos')
+      .upload(storagePath, blob, { contentType: 'video/mp4', upsert: false });
+
+    if (uploadError) {
+      setSubmitting(false);
+      Alert.alert('Upload Failed', uploadError.message);
+      return;
+    }
+
     const { error } = await supabase.from('videos').insert({
-      candidate_id: session.user.id,
+      candidate_id: candidateId,
       status: 'submitted',
       submitted_at: new Date().toISOString(),
+      storage_path: storagePath,
     });
 
     setSubmitting(false);

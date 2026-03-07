@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert, ScrollView, ActivityIndicator, Platform } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { VideoPlayer } from '@/components/VideoPlayer';
@@ -10,6 +10,40 @@ type VideoWithCandidate = Video & {
   candidates: { name: string; office_sought: string; email: string } | null;
 };
 
+const { width } = require('react-native').Dimensions.get('window');
+const PLAYER_HEIGHT = (width * 9) / 16;
+
+function StorageVideoPlayer({ url }: { url: string }) {
+  if (Platform.OS === 'web') {
+    return (
+      <View style={{ width: '100%', height: PLAYER_HEIGHT, backgroundColor: '#000' }}>
+        {/* @ts-ignore — video is a valid web element */}
+        <video
+          src={url}
+          controls
+          style={{ width: '100%', height: '100%' }}
+        />
+      </View>
+    );
+  }
+
+  // Native — use WebView to render a simple HTML5 video player
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { WebView } = require('react-native-webview');
+  const html = `<html><body style="margin:0;background:#000"><video src="${url}" controls style="width:100%;height:100vh" playsinline></video></body></html>`;
+  return (
+    <View style={{ width: '100%', height: PLAYER_HEIGHT, backgroundColor: '#000' }}>
+      <WebView
+        source={{ html }}
+        style={{ flex: 1 }}
+        allowsFullscreenVideo
+        mediaPlaybackRequiresUserAction={false}
+        javaScriptEnabled
+      />
+    </View>
+  );
+}
+
 export default function ReviewVideoScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [video, setVideo] = useState<VideoWithCandidate | null>(null);
@@ -17,6 +51,7 @@ export default function ReviewVideoScreen() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [storageVideoUrl, setStorageVideoUrl] = useState<string | null>(null);
   const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -27,10 +62,20 @@ export default function ReviewVideoScreen() {
       .select('*, candidates(name, office_sought, email)')
       .eq('id', id)
       .single()
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
         if (!error && data) {
           setVideo(data as VideoWithCandidate);
           setReviewNotes(data.review_notes ?? '');
+
+          // Generate a signed URL for the storage video if available
+          if (data.storage_path) {
+            const { data: signedData } = await supabaseAdmin.storage
+              .from('candidate-videos')
+              .createSignedUrl(data.storage_path, 3600); // 1 hour expiry
+            if (signedData?.signedUrl) {
+              setStorageVideoUrl(signedData.signedUrl);
+            }
+          }
         }
         setLoading(false);
       });
@@ -107,9 +152,11 @@ export default function ReviewVideoScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {video.youtube_url && (
+      {storageVideoUrl ? (
+        <StorageVideoPlayer url={storageVideoUrl} />
+      ) : video.youtube_url ? (
         <VideoPlayer youtubeUrl={video.youtube_url} />
-      )}
+      ) : null}
 
       <View style={styles.info}>
         <Text style={styles.candidateName}>{video.candidates?.name}</Text>
