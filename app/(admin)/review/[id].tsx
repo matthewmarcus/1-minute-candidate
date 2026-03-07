@@ -5,6 +5,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { Colors } from '@/constants/Colors';
 import type { Video } from '@/lib/types';
+import { uploadVideoToYouTube } from '@/lib/youtube';
 
 type VideoWithCandidate = Video & {
   candidates: { name: string; office_sought: string; email: string } | null;
@@ -50,6 +51,7 @@ export default function ReviewVideoScreen() {
   const [reviewNotes, setReviewNotes] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadStep, setUploadStep] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [storageVideoUrl, setStorageVideoUrl] = useState<string | null>(null);
   const [showRejectNotes, setShowRejectNotes] = useState(false);
@@ -102,41 +104,79 @@ export default function ReviewVideoScreen() {
     if (!video) return;
 
     setSubmitting(true);
+    setUploadStep(null);
 
-    const updates: Record<string, unknown> = {
-      status,
-      review_notes: reviewNotes.trim() || null,
-    };
+    try {
+      const updates: Record<string, unknown> = {
+        status,
+        review_notes: reviewNotes.trim() || null,
+      };
 
-    if (status === 'approved') {
-      updates.approved_at = new Date().toISOString();
-    }
+      if (status === 'approved') {
+        // Step 1: get a fresh signed URL for the video file.
+        if (!video.storage_path) {
+          throw new Error('This video has no storage path — cannot upload to YouTube.');
+        }
 
-    const { error } = await supabaseAdmin
-      .from('videos')
-      .update(updates)
-      .eq('id', video.id);
+        setUploadStep('Generating download link…');
+        const { data: signedData, error: signedError } = await supabaseAdmin.storage
+          .from('candidate-videos')
+          .createSignedUrl(video.storage_path, 300); // 5-minute window is enough for the upload
 
-    if (status === 'approved') {
-      await supabaseAdmin
-        .from('candidates')
-        .update({ profile_approved: true })
-        .eq('id', video.candidate_id);
-    }
+        if (signedError || !signedData?.signedUrl) {
+          throw new Error(signedError?.message ?? 'Failed to generate signed URL.');
+        }
 
-    setSubmitting(false);
+        // Step 2: upload to YouTube.
+        setUploadStep('Uploading to YouTube…');
+        const candidateName = video.candidates?.name ?? 'Candidate';
+        const officeTitle = video.candidates?.office_sought ?? '';
+        const youtubeTitle = officeTitle
+          ? `${candidateName} — ${officeTitle}`
+          : candidateName;
 
-    if (error) {
-      Alert.alert('Error', error.message);
-    } else {
+        const { videoId, videoUrl } = await uploadVideoToYouTube(
+          signedData.signedUrl,
+          youtubeTitle,
+        );
+
+        updates.youtube_video_id = videoId;
+        updates.youtube_url = videoUrl;
+        updates.approved_at = new Date().toISOString();
+      }
+
+      // Step 3: persist video status update.
+      setUploadStep('Saving…');
+      const { error } = await supabaseAdmin
+        .from('videos')
+        .update(updates)
+        .eq('id', video.id);
+
+      if (error) throw new Error(error.message);
+
+      if (status === 'approved') {
+        const { error: candidateError } = await supabaseAdmin
+          .from('candidates')
+          .update({ profile_approved: true })
+          .eq('id', video.candidate_id);
+
+        if (candidateError) throw new Error(candidateError.message);
+      }
+
       const message =
         status === 'approved'
-          ? 'Video approved — candidate profile is now live.'
+          ? 'Video approved and uploaded to YouTube — candidate profile is now live.'
           : 'Video rejected — candidate has been notified.';
       setSuccessMessage(message);
       navTimerRef.current = setTimeout(() => {
         router.back();
-      }, 2000);
+      }, 2500);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred.';
+      Alert.alert('Error', message);
+    } finally {
+      setSubmitting(false);
+      setUploadStep(null);
     }
   }
 
@@ -229,9 +269,14 @@ export default function ReviewVideoScreen() {
               onPress={handleRejectPress}
               disabled={submitting}
             >
-              <Text style={styles.rejectButtonFilledText}>
-                {submitting ? 'Rejecting…' : 'Confirm Rejection'}
-              </Text>
+              {submitting ? (
+                <View style={styles.approveButtonInner}>
+                  <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={styles.rejectButtonFilledText}>Rejecting…</Text>
+                </View>
+              ) : (
+                <Text style={styles.rejectButtonFilledText}>Confirm Rejection</Text>
+              )}
             </TouchableOpacity>
           </>
         ) : (
@@ -248,9 +293,14 @@ export default function ReviewVideoScreen() {
               onPress={() => updateStatus('approved')}
               disabled={submitting}
             >
-              <Text style={styles.approveButtonText}>
-                {submitting ? 'Approving…' : 'Approve'}
-              </Text>
+              {submitting ? (
+                <View style={styles.approveButtonInner}>
+                  <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={styles.approveButtonText}>{uploadStep ?? 'Approving…'}</Text>
+                </View>
+              ) : (
+                <Text style={styles.approveButtonText}>Approve</Text>
+              )}
             </TouchableOpacity>
           </>
         )}
@@ -366,6 +416,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.success,
     borderRadius: 8,
     paddingVertical: 14,
+    alignItems: 'center',
+  },
+  approveButtonInner: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
   approveButtonText: {
