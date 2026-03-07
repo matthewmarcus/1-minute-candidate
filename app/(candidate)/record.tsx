@@ -4,7 +4,7 @@ import { CameraView, CameraType, useCameraPermissions, useMicrophonePermissions 
 import { Video, ResizeMode } from 'expo-av';
 import { File as ExpoFile } from 'expo-file-system/next';
 import { router } from 'expo-router';
-import * as ScreenOrientation from '@/lib/screenOrientation';
+import { useUnlockScreenOrientation } from '@/hooks/useScreenOrientation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { Colors } from '@/constants/Colors';
@@ -42,14 +42,8 @@ export default function RecordScreen() {
   const [submitting, setSubmitting] = useState(false);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Unlock orientation so the camera UI (including the timer) rotates naturally
-  // when the user holds the phone in landscape. Re-lock to portrait on unmount.
-  useEffect(() => {
-    ScreenOrientation.unlockAsync();
-    return () => {
-      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
-    };
-  }, []);
+  // Unlock orientation on mount (mobile only), re-lock to portrait on unmount.
+  useUnlockScreenOrientation();
 
   const handleCancel = useCallback(() => {
     if (countdownRef.current) {
