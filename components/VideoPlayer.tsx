@@ -1,5 +1,4 @@
-import { View, StyleSheet, Dimensions } from 'react-native';
-import { WebView } from 'react-native-webview';
+import { View, StyleSheet, Dimensions, Platform } from 'react-native';
 
 interface VideoPlayerProps {
   youtubeUrl: string;
@@ -25,6 +24,22 @@ export function VideoPlayer({ youtubeUrl }: VideoPlayerProps) {
 
   const embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`;
 
+  if (Platform.OS === 'web') {
+    return (
+      <View style={styles.container}>
+        <iframe
+          src={embedUrl}
+          style={{ width: '100%', height: '100%', border: 'none' }}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+      </View>
+    );
+  }
+
+  // Native (iOS / Android) — lazy-require to avoid bundling on web
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { WebView } = require('react-native-webview');
   return (
     <View style={styles.container}>
       <WebView
