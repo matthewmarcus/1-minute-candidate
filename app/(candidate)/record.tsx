@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, Platform }
 import { CameraView, CameraType, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
 import { Video, ResizeMode } from 'expo-av';
 import { router } from 'expo-router';
-import { useUnlockScreenOrientation } from '@/hooks/useScreenOrientation';
+import { useUnlockScreenOrientation, useIsLandscape } from '@/hooks/useScreenOrientation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { Colors } from '@/constants/Colors';
@@ -43,6 +43,7 @@ export default function RecordScreen() {
 
   // Unlock orientation on mount (mobile only), re-lock to portrait on unmount.
   useUnlockScreenOrientation();
+  const isLandscape = useIsLandscape();
 
   // Web does not support native camera or file system modules — show a fallback.
   if (Platform.OS === 'web') {
@@ -268,8 +269,8 @@ export default function RecordScreen() {
           />
 
           <View style={styles.overlay}>
-            {/* Timer — top-left corner */}
-            <View style={styles.timerContainer}>
+            {/* Timer — top center (portrait) or top left (landscape) */}
+            <View style={[styles.timerContainer, isLandscape ? styles.timerLandscape : styles.timerPortrait]}>
               <Text style={[styles.timer, recordingState === 'recording' && secondsLeft <= 10 && styles.timerWarning]}>
                 {secondsLeft}s
               </Text>
@@ -285,22 +286,30 @@ export default function RecordScreen() {
               </TouchableOpacity>
             )}
 
-            {/* Record / Stop + Cancel — right-center edge */}
-            <View style={styles.rightControls}>
-              {recordingState === 'idle' && (
-                <TouchableOpacity style={styles.recordButton} onPress={startRecording}>
-                  <View style={styles.recordButtonInner} />
-                </TouchableOpacity>
-              )}
-              {recordingState === 'recording' && (
-                <TouchableOpacity style={styles.stopButton} onPress={stopRecording}>
-                  <View style={styles.stopButtonInner} />
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity style={styles.cancelOverlayButton} onPress={handleCancel}>
-                <Text style={styles.cancelOverlayText}>✕ Cancel</Text>
+            {/* Record button — bottom center (portrait) or middle right (landscape) */}
+            {recordingState === 'idle' && (
+              <TouchableOpacity
+                style={[styles.recordButton, isLandscape ? styles.actionButtonLandscape : styles.actionButtonPortrait]}
+                onPress={startRecording}
+              >
+                <View style={styles.recordButtonInner} />
               </TouchableOpacity>
-            </View>
+            )}
+
+            {/* Stop button — bottom center (portrait) or middle right (landscape) */}
+            {recordingState === 'recording' && (
+              <TouchableOpacity
+                style={[styles.stopButton, isLandscape ? styles.actionButtonLandscape : styles.actionButtonPortrait]}
+                onPress={stopRecording}
+              >
+                <View style={styles.stopButtonInner} />
+              </TouchableOpacity>
+            )}
+
+            {/* Cancel button — always bottom right */}
+            <TouchableOpacity style={styles.cancelOverlayButton} onPress={handleCancel}>
+              <Text style={styles.cancelOverlayText}>✕ Cancel</Text>
+            </TouchableOpacity>
           </View>
         </>
       ) : (
@@ -489,6 +498,13 @@ const styles = StyleSheet.create({
   timerContainer: {
     position: 'absolute',
     top: 20,
+  },
+  timerPortrait: {
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  timerLandscape: {
     left: 20,
   },
   timer: {
@@ -502,14 +518,18 @@ const styles = StyleSheet.create({
   timerWarning: {
     color: '#ff4444',
   },
-  rightControls: {
+  // Portrait: bottom center. Landscape: middle right.
+  actionButtonPortrait: {
+    position: 'absolute',
+    bottom: 40,
+    left: '50%',
+    transform: [{ translateX: -40 }],
+  },
+  actionButtonLandscape: {
     position: 'absolute',
     right: 20,
-    top: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 16,
+    top: '50%',
+    transform: [{ translateY: -40 }],
   },
   recordButton: {
     width: 80,
@@ -558,6 +578,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   cancelOverlayButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
     paddingVertical: 10,
     paddingHorizontal: 16,
     backgroundColor: 'rgba(0,0,0,0.45)',
