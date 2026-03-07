@@ -52,6 +52,8 @@ export default function ReviewVideoScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [storageVideoUrl, setStorageVideoUrl] = useState<string | null>(null);
+  const [showRejectNotes, setShowRejectNotes] = useState(false);
+  const [rejectNotesError, setRejectNotesError] = useState<string | null>(null);
   const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -81,19 +83,29 @@ export default function ReviewVideoScreen() {
       });
   }, [id]);
 
-  async function updateStatus(status: 'approved' | 'rejected') {
-    if (!video) return;
-
-    if (status === 'rejected' && !reviewNotes.trim()) {
-      Alert.alert('Notes Required', 'Please provide a reason for rejecting this video.');
+  function handleRejectPress() {
+    if (!showRejectNotes) {
+      setShowRejectNotes(true);
+      setRejectNotesError(null);
       return;
     }
+
+    if (!reviewNotes.trim()) {
+      setRejectNotesError('Please provide a reason for rejecting this video.');
+      return;
+    }
+
+    updateStatus('rejected');
+  }
+
+  async function updateStatus(status: 'approved' | 'rejected') {
+    if (!video) return;
 
     setSubmitting(true);
 
     const updates: Record<string, unknown> = {
       status,
-      review_notes: reviewNotes || null,
+      review_notes: reviewNotes.trim() || null,
     };
 
     if (status === 'approved') {
@@ -167,18 +179,29 @@ export default function ReviewVideoScreen() {
         </Text>
       </View>
 
-      <View style={styles.reviewSection}>
-        <Text style={styles.reviewLabel}>Review Notes <Text style={styles.reviewLabelHint}>(required if rejecting)</Text></Text>
-        <TextInput
-          style={styles.reviewInput}
-          value={reviewNotes}
-          onChangeText={setReviewNotes}
-          placeholder="Add notes for the candidate..."
-          placeholderTextColor={Colors.textSecondary}
-          multiline
-          numberOfLines={4}
-        />
-      </View>
+      {showRejectNotes && (
+        <View style={styles.reviewSection}>
+          <Text style={styles.reviewLabel}>
+            Reason for Rejection <Text style={styles.reviewLabelRequired}>*</Text>
+          </Text>
+          <TextInput
+            style={[styles.reviewInput, rejectNotesError ? styles.reviewInputError : null]}
+            value={reviewNotes}
+            onChangeText={(text) => {
+              setReviewNotes(text);
+              if (text.trim()) setRejectNotesError(null);
+            }}
+            placeholder="Explain why this video is being rejected..."
+            placeholderTextColor={Colors.textSecondary}
+            multiline
+            numberOfLines={4}
+            autoFocus
+          />
+          {rejectNotesError && (
+            <Text style={styles.errorInline}>{rejectNotesError}</Text>
+          )}
+        </View>
+      )}
 
       {successMessage && (
         <View style={styles.successBanner}>
@@ -188,20 +211,49 @@ export default function ReviewVideoScreen() {
       )}
 
       <View style={styles.actions}>
-        <TouchableOpacity
-          style={[styles.rejectButton, submitting && styles.buttonDisabled]}
-          onPress={() => updateStatus('rejected')}
-          disabled={submitting}
-        >
-          <Text style={styles.rejectButtonText}>Reject</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.approveButton, submitting && styles.buttonDisabled]}
-          onPress={() => updateStatus('approved')}
-          disabled={submitting}
-        >
-          <Text style={styles.approveButtonText}>Approve</Text>
-        </TouchableOpacity>
+        {showRejectNotes ? (
+          <>
+            <TouchableOpacity
+              style={[styles.cancelButton, submitting && styles.buttonDisabled]}
+              onPress={() => {
+                setShowRejectNotes(false);
+                setRejectNotesError(null);
+                setReviewNotes('');
+              }}
+              disabled={submitting}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.rejectButtonFilled, submitting && styles.buttonDisabled]}
+              onPress={handleRejectPress}
+              disabled={submitting}
+            >
+              <Text style={styles.rejectButtonFilledText}>
+                {submitting ? 'Rejecting…' : 'Confirm Rejection'}
+              </Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <TouchableOpacity
+              style={[styles.rejectButton, submitting && styles.buttonDisabled]}
+              onPress={handleRejectPress}
+              disabled={submitting}
+            >
+              <Text style={styles.rejectButtonText}>Reject</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.approveButton, submitting && styles.buttonDisabled]}
+              onPress={() => updateStatus('approved')}
+              disabled={submitting}
+            >
+              <Text style={styles.approveButtonText}>
+                {submitting ? 'Approving…' : 'Approve'}
+              </Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
     </ScrollView>
   );
@@ -266,6 +318,11 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: Colors.textSecondary,
   },
+  reviewLabelRequired: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.error,
+  },
   reviewInput: {
     backgroundColor: Colors.card,
     borderRadius: 8,
@@ -275,6 +332,15 @@ const styles = StyleSheet.create({
     color: Colors.text,
     height: 100,
     textAlignVertical: 'top',
+  },
+  reviewInputError: {
+    borderWidth: 1.5,
+    borderColor: Colors.error,
+  },
+  errorInline: {
+    marginTop: 6,
+    fontSize: 13,
+    color: Colors.error,
   },
   actions: {
     flexDirection: 'row',
@@ -303,6 +369,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   approveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: Colors.card,
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+  },
+  cancelButtonText: {
+    color: Colors.textSecondary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  rejectButtonFilled: {
+    flex: 1,
+    backgroundColor: Colors.error,
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  rejectButtonFilledText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
