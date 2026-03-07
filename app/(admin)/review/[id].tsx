@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { Colors } from '@/constants/Colors';
 import type { Video } from '@/lib/types';
@@ -20,7 +20,7 @@ export default function ReviewVideoScreen() {
   useEffect(() => {
     if (!id) return;
 
-    supabase
+    supabaseAdmin
       .from('videos')
       .select('*, candidates(name, office_sought, email)')
       .eq('id', id)
@@ -53,13 +53,13 @@ export default function ReviewVideoScreen() {
       updates.approved_at = new Date().toISOString();
     }
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('videos')
       .update(updates)
       .eq('id', video.id);
 
     if (status === 'approved') {
-      await supabase
+      await supabaseAdmin
         .from('candidates')
         .update({ profile_approved: true })
         .eq('id', video.candidate_id);

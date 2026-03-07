@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { Colors } from '@/constants/Colors';
 import type { Video } from '@/lib/types';
 
@@ -14,7 +14,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase
+    supabaseAdmin
       .from('videos')
       .select('*, candidates(name, office_sought)')
       .in('status', ['submitted', 'under_review'])
