@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
+import { Video, ResizeMode } from 'expo-av';
 import { File as ExpoFile } from 'expo-file-system';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -254,24 +255,37 @@ export default function RecordScreen() {
           </View>
         </>
       ) : (
-        <View style={styles.previewContainer}>
-          <Text style={styles.previewTitle}>Video Ready</Text>
-          <Text style={styles.previewSubtitle}>Review your recording before submitting.</Text>
+        <View style={styles.playbackContainer}>
+          <View style={styles.playbackVideoWrapper}>
+            <Video
+              source={{ uri: videoUri! }}
+              style={styles.playbackVideo}
+              resizeMode={ResizeMode.CONTAIN}
+              useNativeControls
+              shouldPlay
+              isLooping
+            />
+          </View>
 
-          <View style={styles.previewActions}>
-            <TouchableOpacity style={[styles.button, styles.buttonSecondary]} onPress={retake}>
-              <Text style={styles.buttonTextSecondary}>Re-record</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, submitting && styles.buttonDisabled]}
-              onPress={submitVideo}
-              disabled={submitting}
-            >
-              <Text style={styles.buttonText}>{submitting ? 'Submitting...' : 'Submit for Review'}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, styles.buttonCancel]} onPress={handleCancel} disabled={submitting}>
-              <Text style={styles.buttonCancelText}>Cancel</Text>
-            </TouchableOpacity>
+          <View style={styles.playbackFooter}>
+            <Text style={styles.playbackTitle}>Review Your Recording</Text>
+            <Text style={styles.playbackSubtitle}>Watch your video, then choose how to proceed.</Text>
+
+            <View style={styles.playbackActions}>
+              <TouchableOpacity
+                style={[styles.button, submitting && styles.buttonDisabled]}
+                onPress={submitVideo}
+                disabled={submitting}
+              >
+                <Text style={styles.buttonText}>{submitting ? 'Submitting...' : 'Submit for Review'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, styles.buttonSecondary]} onPress={retake} disabled={submitting}>
+                <Text style={styles.buttonTextSecondary}>Record Again</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, styles.buttonCancel]} onPress={handleCancel} disabled={submitting}>
+                <Text style={styles.buttonCancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       )}
@@ -479,7 +493,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // --- Preview & shared ---
+  // --- Playback & shared ---
   permissionText: {
     fontSize: 16,
     color: Colors.text,
@@ -487,24 +501,35 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     lineHeight: 24,
   },
-  previewContainer: {
+  playbackContainer: {
     flex: 1,
+    backgroundColor: '#000',
+  },
+  playbackVideoWrapper: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  playbackVideo: {
+    flex: 1,
+  },
+  playbackFooter: {
     backgroundColor: Colors.background,
-    justifyContent: 'center',
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 36,
   },
-  previewTitle: {
-    fontSize: 28,
+  playbackTitle: {
+    fontSize: 22,
     fontWeight: 'bold',
-    color: Colors.primary,
-    marginBottom: 8,
+    color: Colors.text,
+    marginBottom: 4,
   },
-  previewSubtitle: {
-    fontSize: 16,
+  playbackSubtitle: {
+    fontSize: 14,
     color: Colors.textSecondary,
-    marginBottom: 40,
+    marginBottom: 20,
   },
-  previewActions: {
+  playbackActions: {
     gap: 12,
   },
   button: {
