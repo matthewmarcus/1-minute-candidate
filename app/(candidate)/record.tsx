@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
 import { File as ExpoFile } from 'expo-file-system';
 import { router } from 'expo-router';
@@ -8,7 +8,17 @@ import { useAuth } from '@/hooks/useAuth';
 import { Colors } from '@/constants/Colors';
 import { MAX_RECORDING_SECONDS } from '@/constants/Config';
 
-type RecordingState = 'idle' | 'recording' | 'preview';
+type RecordingState = 'tips' | 'idle' | 'recording' | 'preview';
+
+const TIPS = [
+  '📱 Rotate your phone to landscape before recording',
+  '👁️ Look directly at the camera',
+  "🎙️ State your name and the office you're running for",
+  '💬 Deliver your message clearly and confidently',
+  '💡 Find good lighting — face a window if possible',
+  '🔇 Find a quiet space to minimize background noise',
+  '⏱️ You have 60 seconds — use them wisely!',
+];
 
 export default function RecordScreen() {
   const { session } = useAuth();
@@ -17,11 +27,22 @@ export default function RecordScreen() {
   const cameraRef = useRef<CameraView>(null);
 
   const [facing, setFacing] = useState<CameraType>('front');
-  const [recordingState, setRecordingState] = useState<RecordingState>('idle');
+  const [recordingState, setRecordingState] = useState<RecordingState>('tips');
   const [secondsLeft, setSecondsLeft] = useState(MAX_RECORDING_SECONDS);
   const [videoUri, setVideoUri] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const handleCancel = useCallback(() => {
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current);
+      countdownRef.current = null;
+    }
+    if (recordingState === 'recording') {
+      cameraRef.current?.stopRecording();
+    }
+    router.replace('/(candidate)');
+  }, [recordingState]);
 
   const startRecording = useCallback(async () => {
     if (!cameraRef.current) return;
@@ -115,6 +136,46 @@ export default function RecordScreen() {
     );
   }, [videoUri, session]);
 
+  // --- Tips screen (shown before camera opens) ---
+  if (recordingState === 'tips') {
+    return (
+      <View style={styles.tipsScreen}>
+        <ScrollView contentContainerStyle={styles.tipsScrollContent} showsVerticalScrollIndicator={false}>
+          <Text style={styles.tipsScreenTitle}>Before You Record</Text>
+
+          {/* Landscape orientation graphic */}
+          <View style={styles.landscapeGraphicContainer}>
+            <View style={styles.landscapePhoneOuter}>
+              <View style={styles.landscapePhoneInner}>
+                <Text style={styles.landscapePhoneCameraIcon}>📹</Text>
+              </View>
+              {/* Home indicator pill */}
+              <View style={styles.landscapeHomeIndicator} />
+            </View>
+            <Text style={styles.landscapeLabel}>Rotate to landscape mode</Text>
+          </View>
+
+          <View style={styles.tipsListContainer}>
+            {TIPS.map((tip, i) => (
+              <View key={i} style={styles.tipRow}>
+                <Text style={styles.tipRowText}>{tip}</Text>
+              </View>
+            ))}
+          </View>
+
+          <TouchableOpacity style={styles.readyButton} onPress={() => setRecordingState('idle')}>
+            <Text style={styles.readyButtonText}>I'm Ready to Record</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.cancelButtonOutline} onPress={() => router.replace('/(candidate)')}>
+            <Text style={styles.cancelButtonOutlineText}>Cancel</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // --- Permission checks ---
   if (!cameraPermission || !microphonePermission) {
     return (
       <View style={styles.centered}>
@@ -136,10 +197,14 @@ export default function RecordScreen() {
         >
           <Text style={styles.buttonText}>Grant Permissions</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={[styles.button, styles.buttonSecondary, { marginTop: 12 }]} onPress={() => router.replace('/(candidate)')}>
+          <Text style={styles.buttonTextSecondary}>Cancel</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
+  // --- Camera & preview ---
   return (
     <View style={styles.container}>
       {recordingState !== 'preview' ? (
@@ -169,7 +234,9 @@ export default function RecordScreen() {
                 <TouchableOpacity style={styles.recordButton} onPress={startRecording}>
                   <View style={styles.recordButtonInner} />
                 </TouchableOpacity>
-                <View style={styles.placeholder} />
+                <TouchableOpacity style={styles.cancelOverlayButton} onPress={handleCancel}>
+                  <Text style={styles.cancelOverlayText}>✕ Cancel</Text>
+                </TouchableOpacity>
               </View>
             )}
 
@@ -179,20 +246,12 @@ export default function RecordScreen() {
                 <TouchableOpacity style={styles.stopButton} onPress={stopRecording}>
                   <View style={styles.stopButtonInner} />
                 </TouchableOpacity>
-                <View style={styles.placeholder} />
+                <TouchableOpacity style={styles.cancelOverlayButton} onPress={handleCancel}>
+                  <Text style={styles.cancelOverlayText}>✕ Cancel</Text>
+                </TouchableOpacity>
               </View>
             )}
           </View>
-
-          {recordingState === 'idle' && (
-            <View style={styles.tips}>
-              <Text style={styles.tipsTitle}>Tips for your 60-second video:</Text>
-              <Text style={styles.tipItem}>• Look directly at the camera</Text>
-              <Text style={styles.tipItem}>• State your name and office</Text>
-              <Text style={styles.tipItem}>• Deliver your message clearly</Text>
-              <Text style={styles.tipItem}>• Find good lighting</Text>
-            </View>
-          )}
         </>
       ) : (
         <View style={styles.previewContainer}>
@@ -210,6 +269,9 @@ export default function RecordScreen() {
             >
               <Text style={styles.buttonText}>{submitting ? 'Submitting...' : 'Submit for Review'}</Text>
             </TouchableOpacity>
+            <TouchableOpacity style={[styles.button, styles.buttonCancel]} onPress={handleCancel} disabled={submitting}>
+              <Text style={styles.buttonCancelText}>Cancel</Text>
+            </TouchableOpacity>
           </View>
         </View>
       )}
@@ -218,6 +280,101 @@ export default function RecordScreen() {
 }
 
 const styles = StyleSheet.create({
+  // --- Tips screen ---
+  tipsScreen: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  tipsScrollContent: {
+    padding: 24,
+    paddingBottom: 40,
+  },
+  tipsScreenTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: Colors.text,
+    textAlign: 'center',
+    marginBottom: 28,
+  },
+  landscapeGraphicContainer: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  landscapePhoneOuter: {
+    width: 140,
+    height: 80,
+    borderRadius: 12,
+    backgroundColor: Colors.text,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexDirection: 'row',
+    paddingHorizontal: 10,
+    marginBottom: 10,
+  },
+  landscapePhoneInner: {
+    flex: 1,
+    backgroundColor: '#1a73e8',
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 6,
+  },
+  landscapePhoneCameraIcon: {
+    fontSize: 26,
+  },
+  landscapeHomeIndicator: {
+    width: 6,
+    height: 24,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+  },
+  landscapeLabel: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    fontWeight: '500',
+  },
+  tipsListContainer: {
+    marginBottom: 32,
+    gap: 10,
+  },
+  tipRow: {
+    backgroundColor: Colors.card,
+    borderRadius: 10,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  tipRowText: {
+    fontSize: 15,
+    color: Colors.text,
+    lineHeight: 22,
+  },
+  readyButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: 10,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  readyButtonText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  cancelButtonOutline: {
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+  },
+  cancelButtonOutlineText: {
+    color: Colors.textSecondary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
+  // --- Camera & overlay ---
   container: {
     flex: 1,
     backgroundColor: '#000',
@@ -308,26 +465,21 @@ const styles = StyleSheet.create({
   placeholder: {
     width: 60,
   },
-  tips: {
-    position: 'absolute',
-    bottom: 160,
-    left: 20,
-    right: 20,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    borderRadius: 12,
-    padding: 16,
+  cancelOverlayButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
   },
-  tipsTitle: {
+  cancelOverlayText: {
     color: '#fff',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
-    marginBottom: 8,
   },
-  tipItem: {
-    color: 'rgba(255,255,255,0.85)',
-    fontSize: 13,
-    marginBottom: 4,
-  },
+
+  // --- Preview & shared ---
   permissionText: {
     fontSize: 16,
     color: Colors.text,
@@ -369,6 +521,11 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     opacity: 0.6,
   },
+  buttonCancel: {
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+  },
   buttonText: {
     color: '#fff',
     fontSize: 16,
@@ -376,6 +533,11 @@ const styles = StyleSheet.create({
   },
   buttonTextSecondary: {
     color: Colors.primary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  buttonCancelText: {
+    color: Colors.textSecondary,
     fontSize: 16,
     fontWeight: '600',
   },
