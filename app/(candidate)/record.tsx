@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
+import * as FileSystem from 'expo-file-system';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
@@ -70,19 +71,35 @@ export default function RecordScreen() {
 
     // Upload video file to Supabase Storage
     const candidateId = session.user.id;
-    const filename = `${Date.now()}.mp4`;
+    const filename = `${Date.now()}.mov`;
     const storagePath = `${candidateId}/${filename}`;
 
-    const response = await fetch(videoUri);
-    const blob = await response.blob();
+    console.log('[VideoUpload] File URI:', videoUri);
 
-    const { error: uploadError } = await supabase.storage
+    // Read file as Base64 using expo-file-system (works with file:// URIs on iOS)
+    const fileInfo = await FileSystem.getInfoAsync(videoUri);
+    console.log('[VideoUpload] File size before upload:', fileInfo.exists && 'size' in fileInfo ? fileInfo.size : 'file not found');
+
+    const base64 = await FileSystem.readAsStringAsync(videoUri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+
+    // Decode Base64 string to Uint8Array
+    const binaryString = atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+
+    const uploadResponse = await supabase.storage
       .from('candidate-videos')
-      .upload(storagePath, blob, { contentType: 'video/mp4', upsert: false });
+      .upload(storagePath, bytes, { contentType: 'video/quicktime', upsert: false });
 
-    if (uploadError) {
+    console.log('[VideoUpload] Supabase upload response:', JSON.stringify(uploadResponse));
+
+    if (uploadResponse.error) {
       setSubmitting(false);
-      Alert.alert('Upload Failed', uploadError.message);
+      Alert.alert('Upload Failed', uploadResponse.error.message);
       return;
     }
 
