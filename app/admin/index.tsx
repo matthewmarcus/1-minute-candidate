@@ -55,7 +55,7 @@ export default function AdminDashboard() {
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.videoItem}
-              onPress={() => router.push({ pathname: '/(admin)/review/[id]', params: { id: item.id } })}
+              onPress={() => router.push({ pathname: '/admin/review/[id]', params: { id: item.id } })}
             >
               <View>
                 <Text style={styles.candidateName}>{item.candidates?.name ?? 'Unknown'}</Text>
