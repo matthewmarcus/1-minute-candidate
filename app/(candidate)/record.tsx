@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, Platform }
 import { CameraView, CameraType, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
 import { Video, ResizeMode } from 'expo-av';
 import { router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUnlockScreenOrientation, useIsLandscape } from '@/hooks/useScreenOrientation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
@@ -44,6 +45,7 @@ export default function RecordScreen() {
   // Unlock orientation on mount (mobile only), re-lock to portrait on unmount.
   useUnlockScreenOrientation();
   const isLandscape = useIsLandscape();
+  const insets = useSafeAreaInsets();
 
   // Web does not support native camera or file system modules — show a fallback.
   if (Platform.OS === 'web') {
@@ -276,46 +278,75 @@ export default function RecordScreen() {
 
           <View style={styles.overlay}>
             {/* Timer — top center (portrait) or top left (landscape) */}
-            <View style={[styles.timerContainer, isLandscape ? styles.timerLandscape : styles.timerPortrait]}>
+            <View style={[
+              styles.timerContainer,
+              isLandscape ? styles.timerLandscape : styles.timerPortrait,
+              !isLandscape && { top: insets.top + 10 },
+            ]}>
               <Text style={[styles.timer, recordingState === 'recording' && secondsLeft <= 10 && styles.timerWarning]}>
                 {secondsLeft}s
               </Text>
             </View>
 
-            {/* Flip button — bottom-left (idle only) */}
-            {recordingState === 'idle' && (
-              <TouchableOpacity
-                style={styles.flipButton}
-                onPress={() => setFacing((f) => (f === 'front' ? 'back' : 'front'))}
-              >
-                <Text style={styles.flipButtonText}>Flip</Text>
-              </TouchableOpacity>
-            )}
+            {isLandscape ? (
+              /* Landscape: vertical column on right — Cancel above, Record/Stop center, Flip below */
+              <View style={styles.landscapeControls}>
+                <TouchableOpacity style={styles.cancelOverlayButton} onPress={handleCancel}>
+                  <Text style={styles.cancelOverlayText}>✕ Cancel</Text>
+                </TouchableOpacity>
 
-            {/* Record button — bottom center (portrait) or middle right (landscape) */}
-            {recordingState === 'idle' && (
-              <TouchableOpacity
-                style={[styles.recordButton, isLandscape ? styles.actionButtonLandscape : styles.actionButtonPortrait]}
-                onPress={startRecording}
-              >
-                <View style={styles.recordButtonInner} />
-              </TouchableOpacity>
-            )}
+                {recordingState === 'idle' ? (
+                  <TouchableOpacity style={styles.recordButton} onPress={startRecording}>
+                    <View style={styles.recordButtonInner} />
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity style={styles.stopButton} onPress={stopRecording}>
+                    <View style={styles.stopButtonInner} />
+                  </TouchableOpacity>
+                )}
 
-            {/* Stop button — bottom center (portrait) or middle right (landscape) */}
-            {recordingState === 'recording' && (
-              <TouchableOpacity
-                style={[styles.stopButton, isLandscape ? styles.actionButtonLandscape : styles.actionButtonPortrait]}
-                onPress={stopRecording}
-              >
-                <View style={styles.stopButtonInner} />
-              </TouchableOpacity>
-            )}
+                {recordingState === 'idle' ? (
+                  <TouchableOpacity
+                    style={styles.flipButton}
+                    onPress={() => setFacing((f) => (f === 'front' ? 'back' : 'front'))}
+                  >
+                    <Text style={styles.flipButtonText}>🔄 Flip</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <View style={styles.controlButtonPlaceholder} />
+                )}
+              </View>
+            ) : (
+              /* Portrait: horizontal row at bottom — Cancel left, Record/Stop center, Flip right */
+              <View style={[styles.portraitBottomRow, { bottom: insets.bottom + 20 }]}>
+                <View style={{ flex: 1, alignItems: 'flex-start' }}>
+                  <TouchableOpacity style={styles.cancelOverlayButton} onPress={handleCancel}>
+                    <Text style={styles.cancelOverlayText}>✕ Cancel</Text>
+                  </TouchableOpacity>
+                </View>
 
-            {/* Cancel button — always bottom right */}
-            <TouchableOpacity style={styles.cancelOverlayButton} onPress={handleCancel}>
-              <Text style={styles.cancelOverlayText}>✕ Cancel</Text>
-            </TouchableOpacity>
+                {recordingState === 'idle' ? (
+                  <TouchableOpacity style={styles.recordButton} onPress={startRecording}>
+                    <View style={styles.recordButtonInner} />
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity style={styles.stopButton} onPress={stopRecording}>
+                    <View style={styles.stopButtonInner} />
+                  </TouchableOpacity>
+                )}
+
+                <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                  {recordingState === 'idle' && (
+                    <TouchableOpacity
+                      style={styles.flipButton}
+                      onPress={() => setFacing((f) => (f === 'front' ? 'back' : 'front'))}
+                    >
+                      <Text style={styles.flipButtonText}>🔄 Flip</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            )}
           </View>
         </>
       ) : (
@@ -503,15 +534,16 @@ const styles = StyleSheet.create({
   },
   timerContainer: {
     position: 'absolute',
-    top: 20,
   },
   timerPortrait: {
     left: 0,
     right: 0,
     alignItems: 'center',
+    // top is set dynamically via insets
   },
   timerLandscape: {
     left: 20,
+    top: 20,
   },
   timer: {
     fontSize: 48,
@@ -524,18 +556,27 @@ const styles = StyleSheet.create({
   timerWarning: {
     color: '#ff4444',
   },
-  // Portrait: bottom center. Landscape: middle right.
-  actionButtonPortrait: {
+  // Portrait: horizontal row at the bottom of screen
+  portraitBottomRow: {
     position: 'absolute',
-    bottom: 40,
-    left: '50%',
-    transform: [{ translateX: -40 }],
+    left: 20,
+    right: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  actionButtonLandscape: {
+  // Landscape: vertical column on the right side, vertically centered
+  landscapeControls: {
     position: 'absolute',
     right: 20,
-    top: '50%',
-    transform: [{ translateY: -40 }],
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+  },
+  controlButtonPlaceholder: {
+    height: 40,
+    width: 90,
   },
   recordButton: {
     width: 80,
@@ -570,13 +611,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#ff4444',
   },
   flipButton: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
     paddingVertical: 10,
-    paddingHorizontal: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(0,0,0,0.45)',
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
   },
   flipButtonText: {
     color: '#fff',
@@ -584,9 +624,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   cancelOverlayButton: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
     paddingVertical: 10,
     paddingHorizontal: 16,
     backgroundColor: 'rgba(0,0,0,0.45)',
