@@ -44,6 +44,26 @@ function StorageVideoPlayer({ url }: { url: string }) {
   );
 }
 
+async function cleanupStorage(storagePath: string, videoId: string): Promise<void> {
+  const { error: storageError } = await supabaseAdmin.storage
+    .from('candidate-videos')
+    .remove([storagePath]);
+
+  if (storageError) {
+    console.error('[Storage] Failed to delete video file:', storageError.message);
+    return;
+  }
+
+  const { error: updateError } = await supabaseAdmin
+    .from('videos')
+    .update({ storage_path: null })
+    .eq('id', videoId);
+
+  if (updateError) {
+    console.error('[Storage] Failed to clear storage_path on video record:', updateError.message);
+  }
+}
+
 export default function ReviewVideoScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [video, setVideo] = useState<VideoWithCandidate | null>(null);
@@ -158,6 +178,12 @@ export default function ReviewVideoScreen() {
           .eq('id', video.candidate_id);
 
         if (candidateError) throw new Error(candidateError.message);
+      }
+
+      // Best-effort: delete the raw file from storage now that it's on YouTube.
+      if (video.storage_path) {
+        setUploadStep('Cleaning up…');
+        await cleanupStorage(video.storage_path, video.id);
       }
 
       const message =
