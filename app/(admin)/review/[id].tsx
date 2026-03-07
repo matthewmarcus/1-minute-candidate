@@ -166,7 +166,7 @@ export default function ReviewVideoScreen() {
           : 'Video rejected — candidate has been notified.';
       setSuccessMessage(message);
       navTimerRef.current = setTimeout(() => {
-        router.replace('/(admin)');
+        router.replace({ pathname: '/(admin)' });
       }, 2500);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'An unexpected error occurred.';
