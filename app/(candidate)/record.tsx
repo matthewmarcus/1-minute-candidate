@@ -136,13 +136,19 @@ export default function RecordScreen() {
 
     console.log('[VideoUpload] File URI:', videoUri);
 
-    // Dynamically require expo-file-system/next (native only) to avoid web crashes.
+    // Use legacy expo-file-system API (works in Expo Go managed workflow).
+    // expo-file-system/next is not available in Expo Go.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { File: ExpoFile } = require('expo-file-system/next');
-    const file = new ExpoFile(videoUri);
-    console.log('[VideoUpload] File size before upload:', file.size);
-
-    const bytes = await file.bytes();
+    const FileSystem = require('expo-file-system');
+    const base64 = await FileSystem.readAsStringAsync(videoUri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    const binaryString = atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    console.log('[VideoUpload] File size before upload:', bytes.byteLength);
 
     const uploadResponse = await supabase.storage
       .from('candidate-videos')
