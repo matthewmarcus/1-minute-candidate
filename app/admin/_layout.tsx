@@ -17,7 +17,7 @@ export default function AdminLayout() {
 
   const currentSegment = segments[segments.length - 1];
   if (!authenticated && currentSegment !== 'login') {
-    return <Redirect href="/(admin)/login" />;
+    return <Redirect href="/admin/login" />;
   }
 
   return (

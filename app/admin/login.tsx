@@ -20,7 +20,7 @@ export default function AdminLogin() {
     setLoading(false);
 
     if (success) {
-      router.replace('/(admin)');
+      router.replace('/admin');
     } else {
       Alert.alert('Access Denied', 'Incorrect password.');
       setPassword('');
