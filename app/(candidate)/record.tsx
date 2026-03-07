@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
+import * as FileSystem from 'expo-file-system';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
@@ -73,12 +74,14 @@ export default function RecordScreen() {
     const filename = `${Date.now()}.mp4`;
     const storagePath = `${candidateId}/${filename}`;
 
-    const response = await fetch(videoUri);
-    const blob = await response.blob();
+    const base64 = await FileSystem.readAsStringAsync(videoUri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    const uint8Array = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
 
     const { error: uploadError } = await supabase.storage
       .from('candidate-videos')
-      .upload(storagePath, blob, { contentType: 'video/mp4', upsert: false });
+      .upload(storagePath, uint8Array, { contentType: 'video/mp4', upsert: false });
 
     if (uploadError) {
       setSubmitting(false);
