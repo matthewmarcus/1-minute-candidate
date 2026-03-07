@@ -4,7 +4,7 @@ import { CameraView, CameraType, useCameraPermissions, useMicrophonePermissions 
 import { Video, ResizeMode } from 'expo-av';
 import { File as ExpoFile } from 'expo-file-system/next';
 import { router } from 'expo-router';
-import * as ScreenOrientation from 'expo-screen-orientation';
+import * as ScreenOrientation from '@/lib/screenOrientation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { Colors } from '@/constants/Colors';
