@@ -186,6 +186,30 @@ export default function ReviewVideoScreen() {
         await cleanupStorage(video.storage_path, video.id);
       }
 
+      // Best-effort: notify the candidate by email. Errors are logged but do
+      // not block the approve/reject action from completing.
+      setUploadStep('Notifying candidate…');
+      const notifyBody =
+        status === 'approved'
+          ? {
+              candidate_email: video.candidates?.email,
+              candidate_name: video.candidates?.name,
+              status: 'approved' as const,
+              youtube_url: updates.youtube_url as string,
+            }
+          : {
+              candidate_email: video.candidates?.email,
+              candidate_name: video.candidates?.name,
+              status: 'rejected' as const,
+              review_notes: reviewNotes.trim() || null,
+            };
+      const { error: notifyError } = await supabaseAdmin.functions.invoke('notify-candidate', {
+        body: notifyBody,
+      });
+      if (notifyError) {
+        console.error('[notify-candidate] Failed to send notification:', notifyError.message);
+      }
+
       const message =
         status === 'approved'
           ? 'Video approved and uploaded to YouTube — candidate profile is now live.'
