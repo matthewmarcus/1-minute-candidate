@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { Colors } from '@/constants/Colors';
 import type { Video } from '@/lib/types';
@@ -13,17 +13,20 @@ export default function AdminDashboard() {
   const [pendingVideos, setPendingVideos] = useState<VideoWithCandidate[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    supabaseAdmin
-      .from('videos')
-      .select('*, candidates(name, office_sought)')
-      .in('status', ['submitted', 'under_review'])
-      .order('submitted_at', { ascending: true })
-      .then(({ data, error }) => {
-        if (!error && data) setPendingVideos(data as VideoWithCandidate[]);
-        setLoading(false);
-      });
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      supabaseAdmin
+        .from('videos')
+        .select('*, candidates(name, office_sought)')
+        .in('status', ['submitted', 'under_review'])
+        .order('submitted_at', { ascending: true })
+        .then(({ data, error }) => {
+          if (!error && data) setPendingVideos(data as VideoWithCandidate[]);
+          setLoading(false);
+        });
+    }, []),
+  );
 
   if (loading) {
     return (
