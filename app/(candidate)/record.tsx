@@ -1,8 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, Platform } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
 import { Video, ResizeMode } from 'expo-av';
-import { File as ExpoFile } from 'expo-file-system/next';
 import { router } from 'expo-router';
 import { useUnlockScreenOrientation } from '@/hooks/useScreenOrientation';
 import { supabase } from '@/lib/supabase';
@@ -44,6 +43,21 @@ export default function RecordScreen() {
 
   // Unlock orientation on mount (mobile only), re-lock to portrait on unmount.
   useUnlockScreenOrientation();
+
+  // Web does not support native camera or file system modules — show a fallback.
+  if (Platform.OS === 'web') {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.webUnsupportedTitle}>Mobile Only</Text>
+        <Text style={styles.webUnsupportedText}>
+          Video recording is only available on the mobile app. Download the app to record and submit your candidate video.
+        </Text>
+        <TouchableOpacity style={styles.button} onPress={() => router.replace('/(candidate)')}>
+          <Text style={styles.buttonText}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   const handleCancel = useCallback(() => {
     if (countdownRef.current) {
@@ -121,7 +135,9 @@ export default function RecordScreen() {
 
     console.log('[VideoUpload] File URI:', videoUri);
 
-    // Use the SDK 54 File class from expo-file-system (implements Blob interface)
+    // Dynamically require expo-file-system/next (native only) to avoid web crashes.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { File: ExpoFile } = require('expo-file-system/next');
     const file = new ExpoFile(videoUri);
     console.log('[VideoUpload] File size before upload:', file.size);
 
@@ -445,6 +461,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: Colors.background,
     padding: 24,
+  },
+  webUnsupportedTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: Colors.text,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  webUnsupportedText: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 32,
   },
   camera: {
     flex: 1,
