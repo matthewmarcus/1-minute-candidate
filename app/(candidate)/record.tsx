@@ -258,40 +258,39 @@ export default function RecordScreen() {
           />
 
           <View style={styles.overlay}>
+            {/* Timer — top-left corner */}
             <View style={styles.timerContainer}>
               <Text style={[styles.timer, recordingState === 'recording' && secondsLeft <= 10 && styles.timerWarning]}>
                 {secondsLeft}s
               </Text>
             </View>
 
+            {/* Flip button — bottom-left (idle only) */}
             {recordingState === 'idle' && (
-              <View style={styles.controls}>
-                <TouchableOpacity
-                  style={styles.flipButton}
-                  onPress={() => setFacing((f) => (f === 'front' ? 'back' : 'front'))}
-                >
-                  <Text style={styles.flipButtonText}>Flip</Text>
-                </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.flipButton}
+                onPress={() => setFacing((f) => (f === 'front' ? 'back' : 'front'))}
+              >
+                <Text style={styles.flipButtonText}>Flip</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Record / Stop + Cancel — right-center edge */}
+            <View style={styles.rightControls}>
+              {recordingState === 'idle' && (
                 <TouchableOpacity style={styles.recordButton} onPress={startRecording}>
                   <View style={styles.recordButtonInner} />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.cancelOverlayButton} onPress={handleCancel}>
-                  <Text style={styles.cancelOverlayText}>✕ Cancel</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {recordingState === 'recording' && (
-              <View style={styles.controls}>
-                <View style={styles.placeholder} />
+              )}
+              {recordingState === 'recording' && (
                 <TouchableOpacity style={styles.stopButton} onPress={stopRecording}>
                   <View style={styles.stopButtonInner} />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.cancelOverlayButton} onPress={handleCancel}>
-                  <Text style={styles.cancelOverlayText}>✕ Cancel</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+              )}
+              <TouchableOpacity style={styles.cancelOverlayButton} onPress={handleCancel}>
+                <Text style={styles.cancelOverlayText}>✕ Cancel</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </>
       ) : (
@@ -462,11 +461,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    justifyContent: 'space-between',
   },
   timerContainer: {
-    paddingTop: 60,
-    alignItems: 'center',
+    position: 'absolute',
+    top: 20,
+    left: 20,
   },
   timer: {
     fontSize: 48,
@@ -479,12 +478,14 @@ const styles = StyleSheet.create({
   timerWarning: {
     color: '#ff4444',
   },
-  controls: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+  rightControls: {
+    position: 'absolute',
+    right: 20,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingBottom: 60,
-    paddingHorizontal: 40,
+    gap: 16,
   },
   recordButton: {
     width: 80,
@@ -519,6 +520,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#ff4444',
   },
   flipButton: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
     paddingVertical: 10,
     paddingHorizontal: 20,
     backgroundColor: 'rgba(255,255,255,0.2)',
@@ -528,9 +532,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
-  },
-  placeholder: {
-    width: 60,
   },
   cancelOverlayButton: {
     paddingVertical: 10,
