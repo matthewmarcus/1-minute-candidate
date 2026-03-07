@@ -139,3 +139,7 @@ The platform is owned and operated by 60secondz, LLC. The official domain is 1mi
 - The 60-second limit is a hard constraint — it is core to the brand and must be enforced in the recording UI
 - Always ask for confirmation before running destructive database operations
 - Commit frequently with clear, descriptive commit messages
+
+## Pull Request Guidelines
+- Always include a clear PR description summarizing what was changed and why
+- Keep PR titles concise and descriptive
