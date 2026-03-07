@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
@@ -16,6 +16,8 @@ export default function ReviewVideoScreen() {
   const [reviewNotes, setReviewNotes] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -70,15 +72,22 @@ export default function ReviewVideoScreen() {
     if (error) {
       Alert.alert('Error', error.message);
     } else {
-      Alert.alert(
-        status === 'approved' ? 'Video Approved' : 'Video Rejected',
+      const message =
         status === 'approved'
-          ? 'The candidate profile is now live.'
-          : 'The candidate has been notified.',
-        [{ text: 'OK', onPress: () => router.back() }]
-      );
+          ? 'Video approved — candidate profile is now live.'
+          : 'Video rejected — candidate has been notified.';
+      setSuccessMessage(message);
+      navTimerRef.current = setTimeout(() => {
+        router.back();
+      }, 2000);
     }
   }
+
+  useEffect(() => {
+    return () => {
+      if (navTimerRef.current) clearTimeout(navTimerRef.current);
+    };
+  }, []);
 
   if (loading) {
     return (
@@ -123,6 +132,13 @@ export default function ReviewVideoScreen() {
           numberOfLines={4}
         />
       </View>
+
+      {successMessage && (
+        <View style={styles.successBanner}>
+          <Text style={styles.successBannerText}>{successMessage}</Text>
+          <Text style={styles.successBannerHint}>Returning to review queue…</Text>
+        </View>
+      )}
 
       <View style={styles.actions}>
         <TouchableOpacity
@@ -246,5 +262,28 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  successBanner: {
+    margin: 24,
+    marginBottom: 0,
+    backgroundColor: Colors.success + '20',
+    borderWidth: 1.5,
+    borderColor: Colors.success,
+    borderRadius: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  successBannerText: {
+    color: Colors.success,
+    fontSize: 15,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  successBannerHint: {
+    color: Colors.success,
+    fontSize: 12,
+    marginTop: 4,
+    opacity: 0.8,
   },
 });
