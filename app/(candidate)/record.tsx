@@ -11,6 +11,12 @@ import { MAX_RECORDING_SECONDS } from '@/constants/Config';
 
 type RecordingState = 'tips' | 'idle' | 'recording' | 'preview';
 
+function formatDuration(secs: number): string {
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
 const TIPS = [
   '📱 Rotate your phone to landscape before recording',
   '👁️ Look directly at the camera',
@@ -31,6 +37,7 @@ export default function RecordScreen() {
   const [recordingState, setRecordingState] = useState<RecordingState>('tips');
   const [secondsLeft, setSecondsLeft] = useState(MAX_RECORDING_SECONDS);
   const [videoUri, setVideoUri] = useState<string | null>(null);
+  const [videoDurationSecs, setVideoDurationSecs] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -82,9 +89,21 @@ export default function RecordScreen() {
 
   const retake = useCallback(() => {
     setVideoUri(null);
+    setVideoDurationSecs(null);
     setRecordingState('idle');
     setSecondsLeft(MAX_RECORDING_SECONDS);
   }, []);
+
+  const confirmRetake = useCallback(() => {
+    Alert.alert(
+      'Record Again?',
+      'Are you sure? Your current recording will be lost.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Yes, Record Again', style: 'destructive', onPress: retake },
+      ]
+    );
+  }, [retake]);
 
   const submitVideo = useCallback(async () => {
     if (!videoUri || !session?.user) return;
@@ -136,6 +155,17 @@ export default function RecordScreen() {
       [{ text: 'OK', onPress: () => router.replace('/(candidate)') }]
     );
   }, [videoUri, session]);
+
+  const confirmSubmit = useCallback(() => {
+    Alert.alert(
+      'Submit Video?',
+      'Are you sure you want to submit this video for review?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Yes, Submit', onPress: submitVideo },
+      ]
+    );
+  }, [submitVideo]);
 
   // --- Tips screen (shown before camera opens) ---
   if (recordingState === 'tips') {
@@ -264,22 +294,35 @@ export default function RecordScreen() {
               useNativeControls
               shouldPlay
               isLooping
+              onPlaybackStatusUpdate={(status) => {
+                if (
+                  status.isLoaded &&
+                  status.durationMillis != null &&
+                  videoDurationSecs === null
+                ) {
+                  setVideoDurationSecs(Math.round(status.durationMillis / 1000));
+                }
+              }}
             />
           </View>
 
           <View style={styles.playbackFooter}>
             <Text style={styles.playbackTitle}>Review Your Recording</Text>
-            <Text style={styles.playbackSubtitle}>Watch your video, then choose how to proceed.</Text>
+            {videoDurationSecs !== null ? (
+              <Text style={styles.playbackDuration}>Your video is {formatDuration(videoDurationSecs)}</Text>
+            ) : (
+              <Text style={styles.playbackSubtitle}>Watch your video, then choose how to proceed.</Text>
+            )}
 
             <View style={styles.playbackActions}>
               <TouchableOpacity
                 style={[styles.button, submitting && styles.buttonDisabled]}
-                onPress={submitVideo}
+                onPress={confirmSubmit}
                 disabled={submitting}
               >
                 <Text style={styles.buttonText}>{submitting ? 'Submitting...' : 'Submit for Review'}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, styles.buttonSecondary]} onPress={retake} disabled={submitting}>
+              <TouchableOpacity style={[styles.button, styles.buttonSecondary]} onPress={confirmRetake} disabled={submitting}>
                 <Text style={styles.buttonTextSecondary}>Record Again</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.button, styles.buttonCancel]} onPress={handleCancel} disabled={submitting}>
@@ -527,6 +570,12 @@ const styles = StyleSheet.create({
   playbackSubtitle: {
     fontSize: 14,
     color: Colors.textSecondary,
+    marginBottom: 20,
+  },
+  playbackDuration: {
+    fontSize: 15,
+    color: Colors.text,
+    fontWeight: '600',
     marginBottom: 20,
   },
   playbackActions: {
