@@ -290,68 +290,55 @@ export default function ReviewVideoScreen() {
         </View>
       )}
 
-      {successMessage && (
+      {successMessage ? (
         <View style={styles.successBanner}>
           <Text style={styles.successBannerText}>{successMessage}</Text>
           <Text style={styles.successBannerHint}>Returning to review queue…</Text>
         </View>
-      )}
-
-      <View style={styles.actions}>
-        {showRejectNotes ? (
-          <>
-            <TouchableOpacity
-              style={[styles.cancelButton, submitting && styles.buttonDisabled]}
-              onPress={() => {
-                setShowRejectNotes(false);
-                setRejectNotesError(null);
-                setReviewNotes('');
-              }}
-              disabled={submitting}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.rejectButtonFilled, submitting && styles.buttonDisabled]}
-              onPress={handleRejectPress}
-              disabled={submitting}
-            >
-              {submitting ? (
-                <View style={styles.approveButtonInner}>
-                  <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
-                  <Text style={styles.rejectButtonFilledText}>Rejecting…</Text>
-                </View>
-              ) : (
+      ) : submitting ? (
+        <View style={styles.actionStatus}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          {uploadStep && <Text style={styles.uploadStepText}>{uploadStep}</Text>}
+        </View>
+      ) : (
+        <View style={styles.actions}>
+          {showRejectNotes ? (
+            <>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => {
+                  setShowRejectNotes(false);
+                  setRejectNotesError(null);
+                  setReviewNotes('');
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.rejectButtonFilled}
+                onPress={handleRejectPress}
+              >
                 <Text style={styles.rejectButtonFilledText}>Confirm Rejection</Text>
-              )}
-            </TouchableOpacity>
-          </>
-        ) : (
-          <>
-            <TouchableOpacity
-              style={[styles.rejectButton, submitting && styles.buttonDisabled]}
-              onPress={handleRejectPress}
-              disabled={submitting}
-            >
-              <Text style={styles.rejectButtonText}>Reject</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.approveButton, submitting && styles.buttonDisabled]}
-              onPress={() => updateStatus('approved')}
-              disabled={submitting}
-            >
-              {submitting ? (
-                <View style={styles.approveButtonInner}>
-                  <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
-                  <Text style={styles.approveButtonText}>{uploadStep ?? 'Approving…'}</Text>
-                </View>
-              ) : (
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <TouchableOpacity
+                style={styles.rejectButton}
+                onPress={handleRejectPress}
+              >
+                <Text style={styles.rejectButtonText}>Reject</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.approveButton}
+                onPress={() => updateStatus('approved')}
+              >
                 <Text style={styles.approveButtonText}>Approve</Text>
-              )}
-            </TouchableOpacity>
-          </>
-        )}
-      </View>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -502,6 +489,18 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  actionStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    padding: 24,
+  },
+  uploadStepText: {
+    fontSize: 15,
+    color: Colors.textSecondary,
+    fontWeight: '500',
   },
   successBanner: {
     margin: 24,
