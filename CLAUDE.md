@@ -141,5 +141,6 @@ The platform is owned and operated by 60secondz, LLC. The official domain is 1mi
 - Commit frequently with clear, descriptive commit messages
 
 ## Pull Request Guidelines
-- Always include a clear PR description summarizing what was changed and why
+- ALWAYS include a PR description. Never create a PR without one.
+The description must summarize: what was changed, why, and any testing notes.
 - Keep PR titles concise and descriptive
