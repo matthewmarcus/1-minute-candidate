@@ -13,6 +13,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import type { LayoutChangeEvent } from 'react-native';
+import * as FileSystem from 'expo-file-system';
+import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { Colors } from '@/constants/Colors';
@@ -116,41 +118,100 @@ function PhotoUpload({
   photoUrl,
   candidateId,
   onUpload,
+  onError,
 }: {
   photoUrl: string | null;
   candidateId: string;
   onUpload: (url: string) => void;
+  onError: (msg: string) => void;
 }) {
   const [uploading, setUploading] = useState(false);
 
-  async function pickAndUpload() {
-    if (Platform.OS !== 'web') return;
+  async function uploadToSupabase(uri: string, mimeType: string) {
+    setUploading(true);
+    const ext = mimeType.split('/')[1] ?? uri.split('.').pop() ?? 'jpg';
+    const path = `${candidateId}/profile.${ext}`;
 
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = async (e: Event) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
+    // Read file as base64 then convert to Uint8Array (legacy FileSystem API works in Expo Go)
+    const base64 = await FileSystem.readAsStringAsync(uri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
 
-      setUploading(true);
-      const ext = file.name.split('.').pop() ?? 'jpg';
-      const path = `${candidateId}/photo.${ext}`;
+    const { error } = await supabase.storage
+      .from('candidate-photos')
+      .upload(path, bytes, { upsert: true, contentType: mimeType });
 
-      const { error } = await supabase.storage
-        .from('candidate-photos')
-        .upload(path, file, { upsert: true, contentType: file.type });
-
-      if (error) {
-        setUploading(false);
-        return;
-      }
-
-      const { data } = supabase.storage.from('candidate-photos').getPublicUrl(path);
-      onUpload(data.publicUrl);
+    if (error) {
       setUploading(false);
-    };
-    input.click();
+      onError('Upload failed: ' + error.message);
+      return;
+    }
+
+    const { data } = supabase.storage.from('candidate-photos').getPublicUrl(path);
+    onUpload(data.publicUrl);
+    setUploading(false);
+  }
+
+  async function pickNative() {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      onError('Permission to access photos is required.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (result.canceled || !result.assets[0]) return;
+
+    const asset = result.assets[0];
+    await uploadToSupabase(asset.uri, asset.mimeType ?? 'image/jpeg');
+  }
+
+  async function pickWeb() {
+    return new Promise<void>((resolve) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = async (e: Event) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (!file) { resolve(); return; }
+
+        setUploading(true);
+        const ext = file.name.split('.').pop() ?? 'jpg';
+        const path = `${candidateId}/profile.${ext}`;
+
+        const { error } = await supabase.storage
+          .from('candidate-photos')
+          .upload(path, file, { upsert: true, contentType: file.type });
+
+        if (error) {
+          setUploading(false);
+          onError('Upload failed: ' + error.message);
+          resolve();
+          return;
+        }
+
+        const { data } = supabase.storage.from('candidate-photos').getPublicUrl(path);
+        onUpload(data.publicUrl);
+        setUploading(false);
+        resolve();
+      };
+      input.click();
+    });
+  }
+
+  function handlePress() {
+    if (Platform.OS === 'web') {
+      pickWeb();
+    } else {
+      pickNative();
+    }
   }
 
   return (
@@ -163,21 +224,15 @@ function PhotoUpload({
         </View>
       )}
       <View style={styles.photoUploadRight}>
-        {Platform.OS === 'web' ? (
-          <TouchableOpacity
-            style={[styles.uploadButton, uploading && styles.uploadButtonDisabled]}
-            onPress={pickAndUpload}
-            disabled={uploading}
-          >
-            <Text style={styles.uploadButtonText}>
-              {uploading ? 'Uploading...' : photoUrl ? 'Change Photo' : 'Upload Photo'}
-            </Text>
-          </TouchableOpacity>
-        ) : (
-          <Text style={styles.mobilePhotoNote}>
-            Photo upload is available on the web version.
+        <TouchableOpacity
+          style={[styles.uploadButton, uploading && styles.uploadButtonDisabled]}
+          onPress={handlePress}
+          disabled={uploading}
+        >
+          <Text style={styles.uploadButtonText}>
+            {uploading ? 'Uploading...' : photoUrl ? 'Change Photo' : 'Upload Photo'}
           </Text>
-        )}
+        </TouchableOpacity>
         <Text style={styles.photoHint}>JPG or PNG, square crop recommended</Text>
       </View>
     </View>
@@ -314,6 +369,7 @@ export default function CandidateProfile() {
             photoUrl={profile.photo_url ?? null}
             candidateId={session?.user?.id ?? ''}
             onUpload={(url) => set('photo_url', url)}
+            onError={(msg) => showToast(msg, 'error')}
           />
         </View>
 
@@ -659,11 +715,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 13,
     fontWeight: '600',
-  },
-  mobilePhotoNote: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    fontStyle: 'italic',
   },
   photoHint: {
     fontSize: 11,
