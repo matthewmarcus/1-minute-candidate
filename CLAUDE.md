@@ -1,5 +1,11 @@
 # 1 Minute Candidate — Project Briefing
 
+## ⚠️ CRITICAL RULES — READ FIRST
+
+1. After adding ANY new package to package.json, ALWAYS run `npm install` immediately in the same task. Never leave a package added but not installed.
+
+2. Every feature must work on both iOS (Expo Go) and web unless explicitly noted otherwise.
+
 ## What We're Building
 
 1 Minute Candidate is a dual-sided platform connecting political candidates directly with voters through short-form video. Candidates record and submit 60-second-or-less videos via a guided mobile app. Voters use the same app — or the web — to instantly find and watch videos of every candidate on their specific ballot, including while standing in line at the polling center.
@@ -215,4 +221,3 @@ Common patterns:
 - Keyboard avoidance: `KeyboardAvoidingView` with `Platform.OS === 'ios' ? 'padding' : 'height'`
 - Linking/sharing: `Linking.openURL()` works on both
 - Orientation lock: use the `.native.ts` / `.ts` file pair pattern
-- After adding any new npm package to package.json, always run npm install immediately as part of the same task before finishing.
