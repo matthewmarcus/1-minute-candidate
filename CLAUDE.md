@@ -215,3 +215,4 @@ Common patterns:
 - Keyboard avoidance: `KeyboardAvoidingView` with `Platform.OS === 'ios' ? 'padding' : 'height'`
 - Linking/sharing: `Linking.openURL()` works on both
 - Orientation lock: use the `.native.ts` / `.ts` file pair pattern
+- After adding any new npm package to package.json, always run npm install immediately as part of the same task before finishing.

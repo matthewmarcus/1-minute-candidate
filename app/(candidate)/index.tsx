@@ -8,13 +8,25 @@ import {
   Image,
   Platform,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
 import { CandidateTabBar } from '@/components/CandidateTabBar';
+import { VideoPlayer } from '@/components/VideoPlayer';
 import type { Candidate, Video } from '@/lib/types';
+
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map((p) => p[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+}
 
 function NavBar({ name, onSignOut }: { name: string; onSignOut: () => void }) {
   return (
@@ -41,6 +53,65 @@ function SubscriptionBadge({ status }: { status: string }) {
   );
 }
 
+// Thumbnail with play button overlay — tapping opens YouTube via Linking
+function VideoThumbnailWithPlay({ videoId, youtubeUrl }: { videoId: string; youtubeUrl: string }) {
+  if (Platform.OS === 'web') {
+    return (
+      // @ts-ignore — anchor is a valid web element
+      <a
+        href={youtubeUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: 'block',
+          position: 'relative',
+          width: '100%',
+          height: 200,
+          backgroundColor: '#000',
+          textDecoration: 'none',
+          borderRadius: 8,
+          overflow: 'hidden',
+          marginBottom: 12,
+        }}
+      >
+        {/* @ts-ignore */}
+        <img
+          src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
+          alt="Video thumbnail"
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+        {/* @ts-ignore */}
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {/* @ts-ignore */}
+          <div style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {/* @ts-ignore */}
+            <div style={{ width: 0, height: 0, borderTop: '12px solid transparent', borderBottom: '12px solid transparent', borderLeft: '20px solid white', marginLeft: 5 }} />
+          </div>
+        </div>
+      </a>
+    );
+  }
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.85}
+      onPress={() => Linking.openURL(youtubeUrl)}
+      style={styles.thumbnailContainer}
+    >
+      <Image
+        source={{ uri: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` }}
+        style={styles.videoThumbnail}
+        resizeMode="cover"
+      />
+      <View style={styles.playOverlay}>
+        <View style={styles.playButton}>
+          <View style={styles.playTriangle} />
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 function VideoCard({ video, onRecord }: { video: Video | null; onRecord: () => void }) {
   if (!video) {
     return (
@@ -59,8 +130,8 @@ function VideoCard({ video, onRecord }: { video: Video | null; onRecord: () => v
     );
   }
 
-  if (video.status === 'approved' && video.youtube_video_id) {
-    const thumbnailUrl = `https://img.youtube.com/vi/${video.youtube_video_id}/hqdefault.jpg`;
+  if (video.status === 'approved' && video.youtube_video_id && video.youtube_url) {
+    const isPublic = video.youtube_privacy === 'public';
     return (
       <View style={styles.card}>
         <View style={styles.cardHeader}>
@@ -69,11 +140,11 @@ function VideoCard({ video, onRecord }: { video: Video | null; onRecord: () => v
             <Text style={styles.badgeLiveText}>Live on your profile</Text>
           </View>
         </View>
-        <Image
-          source={{ uri: thumbnailUrl }}
-          style={styles.videoThumbnail}
-          resizeMode="cover"
-        />
+        {isPublic ? (
+          <VideoPlayer youtubeUrl={video.youtube_url} />
+        ) : (
+          <VideoThumbnailWithPlay videoId={video.youtube_video_id} youtubeUrl={video.youtube_url} />
+        )}
         <TouchableOpacity style={styles.outlineButton} onPress={onRecord}>
           <Text style={styles.outlineButtonText}>Record New Video</Text>
         </TouchableOpacity>
@@ -98,18 +169,29 @@ function VideoCard({ video, onRecord }: { video: Video | null; onRecord: () => v
   );
 }
 
-function ProfileCompletenessCard({ profile }: { profile: Partial<Candidate> }) {
+function ProfileCompletenessCard({ profile, hasVideo }: { profile: Partial<Candidate>; hasVideo: boolean }) {
   const items = [
     { label: 'Bio', done: !!(profile.bio && profile.bio.trim().length > 10) },
     { label: 'Photo', done: !!profile.photo_url },
-    { label: 'Website', done: !!profile.website_url },
-    { label: 'Twitter handle', done: !!profile.twitter_handle },
-    { label: 'Facebook page', done: !!profile.facebook_url },
+    { label: 'Office, party & state', done: !!(profile.office_sought && profile.party && profile.state) },
+    { label: 'Social links', done: !!(profile.website_url || profile.twitter_handle || profile.facebook_url) },
+    { label: 'Video submitted', done: hasVideo },
   ];
 
   const completedCount = items.filter((i) => i.done).length;
   const total = items.length;
   const allDone = completedCount === total;
+
+  if (allDone) {
+    return (
+      <View style={styles.card}>
+        <View style={styles.allDoneRow}>
+          <Text style={styles.allDoneCheck}>✓</Text>
+          <Text style={styles.allDoneText}>Profile 100% complete — great work!</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.card}>
@@ -120,11 +202,9 @@ function ProfileCompletenessCard({ profile }: { profile: Partial<Candidate> }) {
         </Text>
       </View>
 
-      {!allDone && (
-        <View style={styles.progressBarTrack}>
-          <View style={[styles.progressBarFill, { width: `${(completedCount / total) * 100}%` as any }]} />
-        </View>
-      )}
+      <View style={styles.progressBarTrack}>
+        <View style={[styles.progressBarFill, { width: `${(completedCount / total) * 100}%` as any }]} />
+      </View>
 
       <View style={styles.checklistContainer}>
         {items.map((item) => (
@@ -139,14 +219,12 @@ function ProfileCompletenessCard({ profile }: { profile: Partial<Candidate> }) {
         ))}
       </View>
 
-      {!allDone && (
-        <TouchableOpacity
-          style={styles.editProfileLink}
-          onPress={() => router.push('/(candidate)/profile')}
-        >
-          <Text style={styles.editProfileLinkText}>Edit Profile →</Text>
-        </TouchableOpacity>
-      )}
+      <TouchableOpacity
+        style={styles.editProfileLink}
+        onPress={() => router.push('/(candidate)/profile')}
+      >
+        <Text style={styles.editProfileLinkText}>Edit Profile →</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -206,14 +284,25 @@ export default function CandidateDashboard() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Welcome section */}
+        {/* Welcome section with avatar */}
         <View style={styles.welcomeSection}>
-          <Text style={styles.welcomeTitle}>Welcome back, {name.split(' ')[0]}!</Text>
-          {(office || party) && (
-            <Text style={styles.welcomeSubtitle}>
-              {[office, party].filter(Boolean).join(' · ')}
-            </Text>
-          )}
+          <View style={styles.welcomeRow}>
+            {profile?.photo_url ? (
+              <Image source={{ uri: profile.photo_url }} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarInitials}>{getInitials(name)}</Text>
+              </View>
+            )}
+            <View style={styles.welcomeTextBlock}>
+              <Text style={styles.welcomeTitle}>Welcome back, {name.split(' ')[0]}!</Text>
+              {(office || party) && (
+                <Text style={styles.welcomeSubtitle}>
+                  {[office, party].filter(Boolean).join(' · ')}
+                </Text>
+              )}
+            </View>
+          </View>
         </View>
 
         {/* Subscription / Status card */}
@@ -244,7 +333,7 @@ export default function CandidateDashboard() {
         />
 
         {/* Profile completeness */}
-        {profile && <ProfileCompletenessCard profile={profile} />}
+        {profile && <ProfileCompletenessCard profile={profile} hasVideo={!!video} />}
 
         {/* Quick stats row */}
         <View style={styles.statsRow}>
@@ -330,6 +419,32 @@ const styles = StyleSheet.create({
   welcomeSection: {
     marginBottom: 16,
     marginTop: 8,
+  },
+  welcomeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  avatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+  },
+  avatarFallback: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#0F1F5C',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarInitials: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  welcomeTextBlock: {
+    flex: 1,
   },
   welcomeTitle: {
     fontSize: 24,
@@ -437,12 +552,42 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
-  videoThumbnail: {
+  // Thumbnail with play overlay (unlisted/null videos)
+  thumbnailContainer: {
     width: '100%',
     height: 200,
     borderRadius: 8,
-    backgroundColor: Colors.border,
+    backgroundColor: '#000',
+    overflow: 'hidden',
     marginBottom: 12,
+  },
+  videoThumbnail: {
+    width: '100%',
+    height: '100%',
+  },
+  playOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  playButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  playTriangle: {
+    width: 0,
+    height: 0,
+    borderTopWidth: 12,
+    borderBottomWidth: 12,
+    borderLeftWidth: 20,
+    borderTopColor: 'transparent',
+    borderBottomColor: 'transparent',
+    borderLeftColor: '#fff',
+    marginLeft: 5,
   },
   reviewState: {
     alignItems: 'center',
@@ -490,7 +635,25 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // Profile completeness
+  // Profile completeness — 100% complete state
+  allDoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  allDoneCheck: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.success,
+  },
+  allDoneText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.text,
+    flex: 1,
+  },
+
+  // Profile completeness — partial checklist
   completenessCount: {
     fontSize: 14,
     fontWeight: '700',
