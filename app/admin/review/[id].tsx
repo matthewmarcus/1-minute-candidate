@@ -159,6 +159,7 @@ export default function ReviewVideoScreen() {
 
         updates.youtube_video_id = fnData.youtube_video_id;
         updates.youtube_url = fnData.youtube_url;
+        updates.youtube_privacy = fnData.youtube_privacy ?? 'unlisted';
         updates.approved_at = new Date().toISOString();
       }
 

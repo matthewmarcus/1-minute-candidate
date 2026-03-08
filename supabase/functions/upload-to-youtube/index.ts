@@ -151,6 +151,7 @@ Deno.serve(async (req: Request) => {
       JSON.stringify({
         youtube_video_id: videoId,
         youtube_url: `https://www.youtube.com/watch?v=${videoId}`,
+        youtube_privacy: 'unlisted',
       }),
       {
         status: 200,
