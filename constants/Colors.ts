@@ -1,12 +1,13 @@
 export const Colors = {
-  primary: '#1a237e',      // Deep indigo — brand primary
-  primaryLight: '#3949ab', // Lighter indigo for hover states
-  background: '#f8f9fa',
+  primary: '#0F1F5C',       // Navy — brand primary
+  primaryLight: '#1a3080',  // Lighter navy for hover states
+  accent: '#E8192F',        // Red accent
+  background: '#F8F9FA',
   card: '#ffffff',
   text: '#1a1a2e',
-  textSecondary: '#6b7280',
+  textSecondary: '#6B7280',
   border: '#e5e7eb',
-  error: '#dc2626',
+  error: '#E8192F',
   success: '#16a34a',
   warning: '#d97706',
 };
