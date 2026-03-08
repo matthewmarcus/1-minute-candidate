@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { Colors } from '@/constants/Colors';
 import type { Candidate } from '@/lib/types';
 
@@ -25,6 +26,58 @@ interface CivicResponse {
   contests?: Contest[];
   election?: { name: string; electionDay: string };
   error?: { message: string };
+}
+
+// Extracts a 2-letter US state abbreviation from an address string.
+// Matches patterns like "Springfield, IL 62701" or "IL, USA".
+function extractState(address: string): string | null {
+  const match = address.match(/\b([A-Z]{2})\s+\d{5}\b/) ?? address.match(/,\s*([A-Z]{2})\s*(?:,|$)/);
+  return match ? match[1] : null;
+}
+
+// Silently auto-creates unclaimed candidate profiles for any Civic API candidates
+// not already in our database. Runs in the background — errors don't affect the UI.
+async function autoCreateCandidates(contests: Contest[], address: string): Promise<void> {
+  try {
+    const state = extractState(address);
+
+    for (const contest of contests) {
+      if (contest.type === 'Referendum' || !contest.candidates?.length) continue;
+      const office = contest.office ?? '';
+
+      for (const candidate of contest.candidates) {
+        // Skip candidates we already know about (candidateId is set when loaded from our DB)
+        if (candidate.candidateId) continue;
+
+        try {
+          // Check for an existing row using case-insensitive name match + state
+          let query = supabaseAdmin
+            .from('candidates')
+            .select('id')
+            .ilike('name', candidate.name);
+          if (state) {
+            query = query.eq('state', state);
+          }
+          const { data: existing } = await query.maybeSingle();
+          if (existing) continue;
+
+          // Insert the new unclaimed candidate — id and created_at are set by Postgres defaults
+          await supabaseAdmin.from('candidates').insert({
+            name: candidate.name,
+            office_sought: office,
+            party: candidate.party ?? null,
+            state: state ?? null,
+            claimed: false,
+            website_url: candidate.candidateUrl ?? null,
+          });
+        } catch {
+          // Silently ignore per-candidate errors so one failure doesn't stop the rest
+        }
+      }
+    }
+  } catch {
+    // Silently ignore all errors — voter experience must not be affected
+  }
 }
 
 function groupCandidatesIntoContests(candidates: Candidate[]): Contest[] {
@@ -70,6 +123,8 @@ export default function BallotScreen() {
         } else if (data.contests && data.contests.length > 0) {
           setContests(data.contests);
           setElectionName(data.election?.name ?? '');
+          // Fire-and-forget: auto-create unclaimed profiles for new candidates in the background
+          autoCreateCandidates(data.contests, address ?? '');
           return;
         }
         // No live contests — load demo ballot from Supabase

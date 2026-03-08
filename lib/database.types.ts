@@ -7,7 +7,7 @@ export interface Database {
         Row: {
           id: string;
           name: string;
-          email: string;
+          email: string | null;
           office_sought: string;
           party: string | null;
           bio: string | null;
@@ -16,12 +16,18 @@ export interface Database {
           subscription_status: string;
           stripe_customer_id: string | null;
           profile_approved: boolean;
+          claimed: boolean;
+          photo_url: string | null;
+          website_url: string | null;
+          twitter_handle: string | null;
+          facebook_url: string | null;
+          phone: string | null;
           created_at: string;
         };
         Insert: {
           id?: string;
           name: string;
-          email: string;
+          email?: string | null;
           office_sought: string;
           party?: string | null;
           bio?: string | null;
@@ -30,12 +36,18 @@ export interface Database {
           subscription_status?: string;
           stripe_customer_id?: string | null;
           profile_approved?: boolean;
+          claimed?: boolean;
+          photo_url?: string | null;
+          website_url?: string | null;
+          twitter_handle?: string | null;
+          facebook_url?: string | null;
+          phone?: string | null;
           created_at?: string;
         };
         Update: {
           id?: string;
           name?: string;
-          email?: string;
+          email?: string | null;
           office_sought?: string;
           party?: string | null;
           bio?: string | null;
@@ -44,6 +56,12 @@ export interface Database {
           subscription_status?: string;
           stripe_customer_id?: string | null;
           profile_approved?: boolean;
+          claimed?: boolean;
+          photo_url?: string | null;
+          website_url?: string | null;
+          twitter_handle?: string | null;
+          facebook_url?: string | null;
+          phone?: string | null;
           created_at?: string;
         };
       };
