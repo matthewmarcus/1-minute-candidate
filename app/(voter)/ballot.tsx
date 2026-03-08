@@ -1,32 +1,81 @@
 import { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
-import { supabase } from '@/lib/supabase';
-import { CandidateCard } from '@/components/CandidateCard';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { useLocalSearchParams, router } from 'expo-router';
 import { Colors } from '@/constants/Colors';
-import type { Candidate } from '@/lib/types';
+
+interface Candidate {
+  name: string;
+  party?: string;
+  candidateUrl?: string;
+}
+
+interface Contest {
+  type: string;
+  office?: string;
+  candidates?: Candidate[];
+  district?: { name: string };
+  referendumTitle?: string;
+  referendumSubtitle?: string;
+}
+
+interface CivicResponse {
+  contests?: Contest[];
+  election?: { name: string; electionDay: string };
+}
 
 export default function BallotScreen() {
   const { address } = useLocalSearchParams<{ address: string }>();
-  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [contests, setContests] = useState<Contest[]>([]);
+  const [electionName, setElectionName] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase
-      .from('candidates')
-      .select('*')
-      .eq('profile_approved', true)
-      .then(({ data, error }) => {
-        if (!error && data) setCandidates(data);
-        setLoading(false);
-      });
-  }, []);
+    if (!address) return;
+
+    const apiKey = process.env.EXPO_PUBLIC_GOOGLE_CIVIC_API_KEY;
+    if (!apiKey) {
+      setError('Google Civic API key is not configured.');
+      setLoading(false);
+      return;
+    }
+
+    const encodedAddress = encodeURIComponent(address);
+    const url = `https://www.googleapis.com/civicinfo/v2/voterinfo?key=${apiKey}&address=${encodedAddress}&electionId=2000`;
+
+    fetch(url)
+      .then((res) => res.json())
+      .then((data: CivicResponse & { error?: { message: string } }) => {
+        if (data.error) {
+          setError(data.error.message || 'Could not load ballot data for this address.');
+        } else {
+          setContests(data.contests ?? []);
+          setElectionName(data.election?.name ?? '');
+        }
+      })
+      .catch(() => {
+        setError('Failed to reach the voter information service. Please check your connection and try again.');
+      })
+      .finally(() => setLoading(false));
+  }, [address]);
 
   if (loading) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.loadingText}>Finding candidates for your ballot...</Text>
+        <Text style={styles.loadingText}>Looking up your ballot...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.errorTitle}>Couldn't load your ballot</Text>
+        <Text style={styles.errorMessage}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={() => router.back()}>
+          <Text style={styles.retryText}>Try a different address</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -35,24 +84,61 @@ export default function BallotScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Your Ballot</Text>
-        <Text style={styles.headerAddress} numberOfLines={1}>{address}</Text>
+        {electionName ? <Text style={styles.electionName}>{electionName}</Text> : null}
+        <Text style={styles.headerAddress} numberOfLines={2}>{address}</Text>
       </View>
 
-      {candidates.length === 0 ? (
+      {contests.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyTitle}>No candidates found yet</Text>
+          <Text style={styles.emptyTitle}>No contests found</Text>
           <Text style={styles.emptySubtitle}>
-            Candidates in your area haven't submitted their videos yet. Check back closer to the election.
+            No ballot contests were returned for this address. Try entering a more complete address or check back closer to the election.
           </Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => router.back()}>
+            <Text style={styles.retryText}>Try a different address</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
-          data={candidates}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <CandidateCard candidate={item} />}
+          data={contests}
+          keyExtractor={(_, index) => String(index)}
           contentContainerStyle={styles.list}
+          renderItem={({ item }) => <ContestCard contest={item} />}
         />
       )}
+    </View>
+  );
+}
+
+function ContestCard({ contest }: { contest: Contest }) {
+  const title =
+    contest.type === 'Referendum'
+      ? contest.referendumTitle ?? 'Ballot Measure'
+      : contest.office ?? contest.type;
+
+  const districtLabel = contest.district?.name;
+
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.officeName}>{title}</Text>
+        {districtLabel ? <Text style={styles.districtLabel}>{districtLabel}</Text> : null}
+      </View>
+
+      {contest.type === 'Referendum' && contest.referendumSubtitle ? (
+        <Text style={styles.referendumSubtitle}>{contest.referendumSubtitle}</Text>
+      ) : null}
+
+      {contest.candidates && contest.candidates.length > 0 ? (
+        <View style={styles.candidateList}>
+          {contest.candidates.map((c, i) => (
+            <View key={i} style={styles.candidateRow}>
+              <Text style={styles.candidateName}>{c.name}</Text>
+              {c.party ? <Text style={styles.candidateParty}>{c.party}</Text> : null}
+            </View>
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -66,23 +152,44 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 32,
     backgroundColor: Colors.background,
-    gap: 16,
+    gap: 12,
   },
   loadingText: {
     color: Colors.textSecondary,
     fontSize: 15,
   },
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.error,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  errorMessage: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
   header: {
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
+    backgroundColor: Colors.card,
   },
   headerTitle: {
     fontSize: 22,
     fontWeight: 'bold',
     color: Colors.text,
     marginBottom: 4,
+  },
+  electionName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.primary,
+    marginBottom: 2,
   },
   headerAddress: {
     fontSize: 13,
@@ -91,6 +198,59 @@ const styles = StyleSheet.create({
   list: {
     padding: 16,
     gap: 12,
+  },
+  card: {
+    backgroundColor: Colors.card,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+  },
+  cardHeader: {
+    marginBottom: 8,
+  },
+  officeName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.text,
+    marginBottom: 2,
+  },
+  districtLabel: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontWeight: '500',
+  },
+  referendumSubtitle: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginBottom: 8,
+    lineHeight: 18,
+  },
+  candidateList: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingTop: 10,
+    gap: 6,
+  },
+  candidateRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  candidateName: {
+    fontSize: 14,
+    color: Colors.text,
+    fontWeight: '500',
+    flex: 1,
+  },
+  candidateParty: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginLeft: 8,
   },
   empty: {
     flex: 1,
@@ -110,5 +270,18 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
+    marginBottom: 20,
+  },
+  retryButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+  },
+  retryText: {
+    color: Colors.primary,
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
