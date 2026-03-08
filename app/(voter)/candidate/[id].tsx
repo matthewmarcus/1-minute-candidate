@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Linking, Platform, Image } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
+import * as Clipboard from 'expo-clipboard';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { Colors } from '@/constants/Colors';
@@ -8,6 +10,41 @@ import type { Candidate, Video } from '@/lib/types';
 
 const { width } = require('react-native').Dimensions.get('window');
 const THUMBNAIL_HEIGHT = (width * 9) / 16;
+
+const BASE_URL = 'https://1minutecandidate.com';
+
+function getProfileUrl(id: string) {
+  return `${BASE_URL}/candidate/${id}`;
+}
+
+function getInitials(name: string) {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n) => n[0].toUpperCase())
+    .join('');
+}
+
+function ProfilePhoto({ photoUrl, name }: { photoUrl: string | null; name: string }) {
+  const [imgError, setImgError] = useState(false);
+
+  if (photoUrl && !imgError) {
+    return (
+      <Image
+        source={{ uri: photoUrl }}
+        style={styles.photo}
+        onError={() => setImgError(true)}
+      />
+    );
+  }
+
+  return (
+    <View style={[styles.photo, styles.photoPlaceholder]}>
+      <Text style={styles.photoInitials}>{getInitials(name)}</Text>
+    </View>
+  );
+}
 
 function UnlistedVideoThumbnail({ videoId, youtubeUrl }: { videoId: string; youtubeUrl: string }) {
   if (Platform.OS === 'web') {
@@ -54,6 +91,91 @@ function UnlistedVideoThumbnail({ videoId, youtubeUrl }: { videoId: string; yout
         </View>
       </View>
     </TouchableOpacity>
+  );
+}
+
+function SocialLinks({ candidate }: { candidate: Candidate }) {
+  const links: { key: string; url: string; icon: React.ComponentProps<typeof Ionicons>['name']; label: string }[] = [];
+
+  if (candidate.website_url) {
+    links.push({ key: 'website', url: candidate.website_url, icon: 'globe-outline', label: 'Website' });
+  }
+  if (candidate.twitter_handle) {
+    const handle = candidate.twitter_handle.replace(/^@/, '');
+    links.push({ key: 'twitter', url: `https://x.com/${handle}`, icon: 'logo-twitter', label: 'X / Twitter' });
+  }
+  if (candidate.facebook_url) {
+    links.push({ key: 'facebook', url: candidate.facebook_url, icon: 'logo-facebook', label: 'Facebook' });
+  }
+
+  if (links.length === 0) return null;
+
+  return (
+    <View style={styles.socialRow}>
+      {links.map((link) => (
+        <TouchableOpacity
+          key={link.key}
+          style={styles.socialButton}
+          onPress={() => Linking.openURL(link.url)}
+          accessibilityLabel={link.label}
+          accessibilityRole="link"
+        >
+          <Ionicons name={link.icon} size={22} color={Colors.primary} />
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
+function ShareButtons({ candidateId, candidateName }: { candidateId: string; candidateName: string }) {
+  const profileUrl = getProfileUrl(candidateId);
+  const shareText = `Watch ${candidateName}'s 60-second candidate video on 1 Minute Candidate`;
+
+  const handleCopyLink = async () => {
+    await Clipboard.setStringAsync(profileUrl);
+  };
+
+  const handleSMS = () => {
+    const body = encodeURIComponent(`${shareText}: ${profileUrl}`);
+    const url = Platform.OS === 'ios' ? `sms:&body=${body}` : `sms:?body=${body}`;
+    Linking.openURL(url);
+  };
+
+  const handleTwitter = () => {
+    const text = encodeURIComponent(`${shareText}`);
+    const url = encodeURIComponent(profileUrl);
+    Linking.openURL(`https://x.com/intent/tweet?text=${text}&url=${url}`);
+  };
+
+  const handleFacebook = () => {
+    const url = encodeURIComponent(profileUrl);
+    Linking.openURL(`https://www.facebook.com/sharer/sharer.php?u=${url}`);
+  };
+
+  const buttons: { label: string; icon: React.ComponentProps<typeof Ionicons>['name']; onPress: () => void }[] = [
+    { label: 'Copy Link', icon: 'link-outline', onPress: handleCopyLink },
+    { label: 'SMS', icon: 'chatbubble-outline', onPress: handleSMS },
+    { label: 'X / Twitter', icon: 'logo-twitter', onPress: handleTwitter },
+    { label: 'Facebook', icon: 'logo-facebook', onPress: handleFacebook },
+  ];
+
+  return (
+    <View style={styles.shareSection}>
+      <Text style={styles.sectionTitle}>Share</Text>
+      <View style={styles.shareRow}>
+        {buttons.map((btn) => (
+          <TouchableOpacity
+            key={btn.label}
+            style={styles.shareButton}
+            onPress={btn.onPress}
+            accessibilityLabel={btn.label}
+          >
+            <Ionicons name={btn.icon} size={20} color={Colors.primary} />
+            <Text style={styles.shareButtonLabel}>{btn.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
   );
 }
 
@@ -108,25 +230,32 @@ export default function CandidateProfileScreen() {
       )}
 
       <View style={styles.info}>
-        <Text style={styles.name}>{candidate.name}</Text>
-        <Text style={styles.office}>{candidate.office_sought}</Text>
-
-        <View style={styles.badges}>
-          {candidate.party && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{candidate.party}</Text>
+        {/* Photo + name header */}
+        <View style={styles.header}>
+          <ProfilePhoto photoUrl={candidate.photo_url} name={candidate.name} />
+          <View style={styles.headerText}>
+            <Text style={styles.name}>{candidate.name}</Text>
+            <Text style={styles.office}>{candidate.office_sought}</Text>
+            <View style={styles.badges}>
+              {candidate.party && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{candidate.party}</Text>
+                </View>
+              )}
+              {candidate.state && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{candidate.state}</Text>
+                </View>
+              )}
             </View>
-          )}
-          {candidate.state && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{candidate.state}</Text>
-            </View>
-          )}
+          </View>
         </View>
 
         {candidate.district && (
           <Text style={styles.district}>{candidate.district}</Text>
         )}
+
+        <SocialLinks candidate={candidate} />
 
         {candidate.bio && (
           <>
@@ -143,6 +272,8 @@ export default function CandidateProfileScreen() {
           </View>
         )}
       </View>
+
+      <ShareButtons candidateId={id!} candidateName={candidate.name} />
     </ScrollView>
   );
 }
@@ -168,38 +299,81 @@ const styles = StyleSheet.create({
   info: {
     padding: 24,
   },
-  name: {
+  header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 16,
+    marginBottom: 8,
+  },
+  photo: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
+  photoPlaceholder: {
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoInitials: {
+    color: '#fff',
     fontSize: 28,
+    fontWeight: '700',
+  },
+  headerText: {
+    flex: 1,
+    paddingTop: 4,
+  },
+  name: {
+    fontSize: 22,
     fontWeight: 'bold',
     color: Colors.text,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   office: {
-    fontSize: 17,
+    fontSize: 15,
     color: Colors.primary,
     fontWeight: '500',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   badges: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 8,
+    flexWrap: 'wrap',
+    gap: 6,
   },
   badge: {
     backgroundColor: Colors.card,
     borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   badgeText: {
-    fontSize: 13,
+    fontSize: 12,
     color: Colors.textSecondary,
     fontWeight: '500',
   },
   district: {
     fontSize: 14,
     color: Colors.textSecondary,
+    marginBottom: 12,
+  },
+  socialRow: {
+    flexDirection: 'row',
+    gap: 10,
     marginBottom: 20,
+    marginTop: 4,
+  },
+  socialButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sectionTitle: {
     fontSize: 16,
@@ -224,6 +398,34 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  shareSection: {
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 16,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  shareRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  shareButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  shareButtonLabel: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    fontWeight: '500',
+    textAlign: 'center',
   },
   thumbnailContainer: {
     width: '100%',
