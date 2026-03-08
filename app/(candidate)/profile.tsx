@@ -286,9 +286,36 @@ export default function CandidateProfile() {
     setTimeout(() => setToast(null), 3000);
   }
 
+  async function generateSlug(): Promise<string> {
+    const name = profile.name ?? '';
+    const parts = name.trim().toLowerCase().split(/\s+/);
+    const base = parts.join('-').replace(/[^a-z0-9-]/g, '');
+
+    // Check if base slug is available
+    const { data: existing } = await supabase
+      .from('candidates')
+      .select('id')
+      .eq('slug', base)
+      .neq('id', session!.user.id)
+      .maybeSingle();
+
+    if (!existing) return base;
+
+    // Try appending state code
+    const stateCode = (profile.state ?? '').toLowerCase();
+    const withState = stateCode ? `${base}-${stateCode}` : `${base}-1`;
+    return withState;
+  }
+
   async function saveProfile() {
     if (!session?.user) return;
     setSaving(true);
+
+    // Auto-generate slug if not already set
+    let slug = profile.slug ?? null;
+    if (!slug && profile.name) {
+      slug = await generateSlug();
+    }
 
     const { error } = await supabase
       .from('candidates')
@@ -298,10 +325,12 @@ export default function CandidateProfile() {
         office_sought: profile.office_sought,
         party: profile.party,
         state: profile.state,
+        city: profile.city,
         district: profile.district,
         website_url: profile.website_url,
         twitter_handle: profile.twitter_handle,
         facebook_url: profile.facebook_url,
+        slug,
       })
       .eq('id', session.user.id);
 
@@ -310,6 +339,7 @@ export default function CandidateProfile() {
     if (error) {
       showToast('Save failed: ' + error.message, 'error');
     } else {
+      if (slug && !profile.slug) setProfile((prev) => ({ ...prev, slug }));
       showToast('Profile saved!', 'success');
     }
   }
@@ -387,6 +417,20 @@ export default function CandidateProfile() {
               autoCapitalize="words"
               autoCorrect={false}
               onFocus={() => scrollToField('campaign', 'office')}
+            />
+          </View>
+
+          <View style={styles.fieldContainer} onLayout={(e) => onFieldLayout('city', e)}>
+            <Text style={styles.label}>City</Text>
+            <TextInput
+              style={styles.input}
+              value={profile.city ?? ''}
+              onChangeText={(v) => set('city', v)}
+              placeholder="e.g. Denver"
+              placeholderTextColor={Colors.textSecondary}
+              autoCapitalize="words"
+              autoCorrect={false}
+              onFocus={() => scrollToField('campaign', 'city')}
             />
           </View>
 

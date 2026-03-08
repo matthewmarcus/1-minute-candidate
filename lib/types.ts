@@ -20,6 +20,8 @@ export interface Candidate {
   twitter_handle: string | null;
   facebook_url: string | null;
   phone: string | null;
+  city: string | null;
+  slug: string | null;
 }
 
 export interface Video {

@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { Colors } from '@/constants/Colors';
 
-const PUBLIC_ROUTES = ['login', 'register'];
+const PUBLIC_ROUTES = ['login', 'register', 'forgot-password', 'reset-password'];
 
 export default function CandidateLayout() {
   const { session, loading } = useAuth();
@@ -30,6 +30,8 @@ export default function CandidateLayout() {
       <Stack.Screen name="record" options={{ title: 'Record Video', headerShown: false }} />
       <Stack.Screen name="profile" options={{ headerShown: false }} />
       <Stack.Screen name="subscribe" options={{ title: 'Subscribe' }} />
+      <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
+      <Stack.Screen name="reset-password" options={{ headerShown: false }} />
     </Stack>
   );
 }
