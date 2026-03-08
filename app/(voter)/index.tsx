@@ -95,9 +95,25 @@ export default function VoterHome() {
         </View>
       </View>
 
-      <TouchableOpacity style={styles.candidateLink} onPress={() => router.push('/(candidate)/login')}>
-        <Text style={styles.candidateLinkText}>Are you a candidate? Sign in →</Text>
-      </TouchableOpacity>
+      {/* Divider */}
+      <View style={styles.divider} />
+
+      {/* Candidate dual CTA */}
+      <View style={styles.candidateCard}>
+        <View style={styles.candidateCardAccent} />
+        <View style={styles.candidateCardBody}>
+          <Text style={styles.candidateCardHeading}>Are you a candidate?</Text>
+          <Text style={styles.candidateCardBody2}>
+            Record your 60-second pitch and connect with voters in your district.
+          </Text>
+          <TouchableOpacity
+            style={styles.candidateCTAButton}
+            onPress={() => router.push('/(candidate)/login')}
+          >
+            <Text style={styles.candidateCTAButtonText}>Get Started as a Candidate</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </ScrollView>
     </View>
   );
@@ -211,13 +227,52 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textDecorationLine: 'underline',
   },
-  candidateLink: {
-    alignItems: 'center',
-    paddingVertical: 12,
+  divider: {
+    height: 1,
+    backgroundColor: Colors.border,
+    marginBottom: 24,
   },
-  candidateLinkText: {
-    color: Colors.primary,
+  candidateCard: {
+    flexDirection: 'row',
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+  },
+  candidateCardAccent: {
+    width: 5,
+    backgroundColor: '#0F1F5C',
+  },
+  candidateCardBody: {
+    flex: 1,
+    padding: 20,
+  },
+  candidateCardHeading: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0F1F5C',
+    marginBottom: 6,
+  },
+  candidateCardBody2: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  candidateCTAButton: {
+    backgroundColor: '#E8192F',
+    borderRadius: 8,
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+  candidateCTAButtonText: {
+    color: '#fff',
     fontSize: 15,
-    fontWeight: '500',
+    fontWeight: '700',
   },
 });

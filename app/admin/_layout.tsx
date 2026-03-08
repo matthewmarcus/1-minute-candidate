@@ -1,10 +1,10 @@
 import { Stack, Redirect, useSegments } from 'expo-router';
-import { View, ActivityIndicator, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { Colors } from '@/constants/Colors';
 
 export default function AdminLayout() {
-  const { authenticated, loading, logout } = useAdminAuth();
+  const { authenticated, loading } = useAdminAuth();
   const segments = useSegments();
 
   if (loading) {
@@ -21,20 +21,10 @@ export default function AdminLayout() {
   }
 
   return (
-    <Stack>
-      <Stack.Screen name="login" options={{ headerShown: false }} />
-      <Stack.Screen
-        name="index"
-        options={{
-          title: 'Review Queue',
-          headerRight: () => (
-            <TouchableOpacity onPress={logout} style={styles.logoutButton}>
-              <Text style={styles.logoutText}>Sign Out</Text>
-            </TouchableOpacity>
-          ),
-        }}
-      />
-      <Stack.Screen name="review/[id]" options={{ title: 'Review Video' }} />
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="login" />
+      <Stack.Screen name="index" />
+      <Stack.Screen name="review/[id]" />
     </Stack>
   );
 }
@@ -45,15 +35,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: Colors.background,
-  },
-  logoutButton: {
-    marginRight: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  logoutText: {
-    color: Colors.error,
-    fontSize: 14,
-    fontWeight: '500',
   },
 });

@@ -29,7 +29,7 @@ export default function CandidateLayout() {
       <Stack.Screen name="login" options={{ title: 'Login', headerShown: false }} />
       <Stack.Screen name="record" options={{ title: 'Record Video', headerShown: false }} />
       <Stack.Screen name="profile" options={{ headerShown: false }} />
-      <Stack.Screen name="subscribe" options={{ title: 'Subscribe' }} />
+      <Stack.Screen name="subscribe" options={{ headerShown: false }} />
       <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
       <Stack.Screen name="reset-password" options={{ headerShown: false }} />
     </Stack>
