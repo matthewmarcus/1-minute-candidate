@@ -54,7 +54,7 @@ function ProfilePhoto({ photoUrl, name }: { photoUrl: string | null; name: strin
 function UnlistedVideoThumbnail({ videoId, youtubeUrl }: { videoId: string; youtubeUrl: string }) {
   if (Platform.OS === 'web') {
     return (
-      // @ts-ignore — anchor is a valid web element
+      // @ts-ignore
       <a
         href={youtubeUrl}
         target="_blank"
@@ -147,7 +147,7 @@ function ShareButtons({ candidate }: { candidate: Candidate }) {
   };
 
   const handleTwitter = () => {
-    const text = encodeURIComponent(`${shareText}`);
+    const text = encodeURIComponent(shareText);
     const url = encodeURIComponent(profileUrl);
     Linking.openURL(`https://x.com/intent/tweet?text=${text}&url=${url}`);
   };
@@ -184,31 +184,41 @@ function ShareButtons({ candidate }: { candidate: Candidate }) {
   );
 }
 
-export default function CandidateProfileScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+export default function CandidateProfileBySlug() {
+  const { slug } = useLocalSearchParams<{ slug: string }>();
   const [candidate, setCandidate] = useState<Candidate | null>(null);
   const [video, setVideo] = useState<Video | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!id) return;
+    if (!slug) return;
 
-    Promise.all([
-      supabase.from('candidates').select('*').eq('id', id).single(),
-      supabase
-        .from('videos')
-        .select('*')
-        .eq('candidate_id', id)
-        .eq('status', 'approved')
-        .order('approved_at', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-    ]).then(([candidateResult, videoResult]) => {
-      if (!candidateResult.error) setCandidate(candidateResult.data);
-      if (!videoResult.error) setVideo(videoResult.data);
-      setLoading(false);
-    });
-  }, [id]);
+    supabase
+      .from('candidates')
+      .select('*')
+      .eq('slug', slug)
+      .single()
+      .then(({ data, error }) => {
+        if (error || !data) {
+          setLoading(false);
+          return;
+        }
+        setCandidate(data);
+
+        supabase
+          .from('videos')
+          .select('*')
+          .eq('candidate_id', data.id)
+          .eq('status', 'approved')
+          .order('approved_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+          .then(({ data: videoData }) => {
+            setVideo(videoData ?? null);
+            setLoading(false);
+          });
+      });
+  }, [slug]);
 
   if (loading) {
     return (
@@ -235,7 +245,6 @@ export default function CandidateProfileScreen() {
       )}
 
       <View style={styles.info}>
-        {/* Photo + name header */}
         <View style={styles.header}>
           <ProfilePhoto photoUrl={candidate.photo_url} name={candidate.name} />
           <View style={styles.headerText}>
