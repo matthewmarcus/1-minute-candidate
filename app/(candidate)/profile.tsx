@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { CSSProperties } from 'react';
 import {
   View,
@@ -7,10 +7,12 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  KeyboardAvoidingView,
   Platform,
   Image,
   ActivityIndicator,
 } from 'react-native';
+import type { LayoutChangeEvent } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { Colors } from '@/constants/Colors';
@@ -191,6 +193,22 @@ export default function CandidateProfile() {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
+  // Refs for keyboard-aware scrolling
+  const scrollRef = useRef<ScrollView>(null);
+  const cardY = useRef<Record<string, number>>({ about: 0, campaign: 0, online: 0 });
+  const fieldY = useRef<Record<string, number>>({});
+
+  function onCardLayout(card: string, e: LayoutChangeEvent) {
+    cardY.current[card] = e.nativeEvent.layout.y;
+  }
+  function onFieldLayout(field: string, e: LayoutChangeEvent) {
+    fieldY.current[field] = e.nativeEvent.layout.y;
+  }
+  function scrollToField(card: string, field: string) {
+    const y = (cardY.current[card] ?? 0) + (fieldY.current[field] ?? 0);
+    scrollRef.current?.scrollTo({ y: Math.max(0, y - 80), animated: true });
+  }
+
   useEffect(() => {
     if (!session?.user) return;
     supabase
@@ -250,7 +268,10 @@ export default function CandidateProfile() {
   }
 
   return (
-    <View style={styles.rootContainer}>
+    <KeyboardAvoidingView
+      style={styles.rootContainer}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       {/* Top nav bar */}
       <View style={styles.navBar}>
         <Text style={styles.navLogo}>1MC</Text>
@@ -261,6 +282,7 @@ export default function CandidateProfile() {
       {toast && <Toast message={toast.message} type={toast.type} />}
 
       <ScrollView
+        ref={scrollRef}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -269,8 +291,8 @@ export default function CandidateProfile() {
 
         {/* ── Section 1: About You ─────────────────────────────────────── */}
         <Text style={styles.sectionHeader}>About You</Text>
-        <View style={styles.card}>
-          <View style={styles.fieldContainer}>
+        <View style={styles.card} onLayout={(e) => onCardLayout('about', e)}>
+          <View style={styles.fieldContainer} onLayout={(e) => onFieldLayout('bio', e)}>
             <Text style={styles.label}>Bio</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
@@ -281,6 +303,9 @@ export default function CandidateProfile() {
               multiline
               numberOfLines={4}
               textAlignVertical="top"
+              autoCapitalize="sentences"
+              autoCorrect={true}
+              onFocus={() => scrollToField('about', 'bio')}
             />
           </View>
 
@@ -294,8 +319,8 @@ export default function CandidateProfile() {
 
         {/* ── Section 2: Your Campaign ──────────────────────────────────── */}
         <Text style={styles.sectionHeader}>Your Campaign</Text>
-        <View style={styles.card}>
-          <View style={styles.fieldContainer}>
+        <View style={styles.card} onLayout={(e) => onCardLayout('campaign', e)}>
+          <View style={styles.fieldContainer} onLayout={(e) => onFieldLayout('office', e)}>
             <Text style={styles.label}>Office Sought</Text>
             <TextInput
               style={styles.input}
@@ -303,6 +328,9 @@ export default function CandidateProfile() {
               onChangeText={(v) => set('office_sought', v)}
               placeholder="e.g. City Council District 3"
               placeholderTextColor={Colors.textSecondary}
+              autoCapitalize="words"
+              autoCorrect={false}
+              onFocus={() => scrollToField('campaign', 'office')}
             />
           </View>
 
@@ -322,7 +350,7 @@ export default function CandidateProfile() {
             onChange={(v) => set('state', v)}
           />
 
-          <View style={styles.fieldContainer}>
+          <View style={styles.fieldContainer} onLayout={(e) => onFieldLayout('district', e)}>
             <Text style={styles.label}>District</Text>
             <TextInput
               style={styles.input}
@@ -330,14 +358,17 @@ export default function CandidateProfile() {
               onChangeText={(v) => set('district', v)}
               placeholder="e.g. 12th Congressional District"
               placeholderTextColor={Colors.textSecondary}
+              autoCapitalize="words"
+              autoCorrect={false}
+              onFocus={() => scrollToField('campaign', 'district')}
             />
           </View>
         </View>
 
         {/* ── Section 3: Online Presence ────────────────────────────────── */}
         <Text style={styles.sectionHeader}>Online Presence</Text>
-        <View style={styles.card}>
-          <View style={styles.fieldContainer}>
+        <View style={styles.card} onLayout={(e) => onCardLayout('online', e)}>
+          <View style={styles.fieldContainer} onLayout={(e) => onFieldLayout('website', e)}>
             <Text style={styles.label}>Website</Text>
             <TextInput
               style={styles.input}
@@ -346,11 +377,13 @@ export default function CandidateProfile() {
               placeholder="https://yourcampaign.com"
               placeholderTextColor={Colors.textSecondary}
               autoCapitalize="none"
+              autoCorrect={false}
               keyboardType="url"
+              onFocus={() => scrollToField('online', 'website')}
             />
           </View>
 
-          <View style={styles.fieldContainer}>
+          <View style={styles.fieldContainer} onLayout={(e) => onFieldLayout('twitter', e)}>
             <Text style={styles.label}>Twitter / X Handle</Text>
             <View style={styles.inputWithPrefix}>
               <Text style={styles.inputPrefix}>@</Text>
@@ -361,11 +394,13 @@ export default function CandidateProfile() {
                 placeholder="yourhandle"
                 placeholderTextColor={Colors.textSecondary}
                 autoCapitalize="none"
+                autoCorrect={false}
+                onFocus={() => scrollToField('online', 'twitter')}
               />
             </View>
           </View>
 
-          <View style={[styles.fieldContainer, { marginBottom: 0 }]}>
+          <View style={[styles.fieldContainer, { marginBottom: 0 }]} onLayout={(e) => onFieldLayout('facebook', e)}>
             <Text style={styles.label}>Facebook Page URL</Text>
             <TextInput
               style={styles.input}
@@ -374,7 +409,9 @@ export default function CandidateProfile() {
               placeholder="https://facebook.com/yourpage"
               placeholderTextColor={Colors.textSecondary}
               autoCapitalize="none"
+              autoCorrect={false}
               keyboardType="url"
+              onFocus={() => scrollToField('online', 'facebook')}
             />
           </View>
         </View>
@@ -394,7 +431,7 @@ export default function CandidateProfile() {
       </ScrollView>
 
       <CandidateTabBar />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
