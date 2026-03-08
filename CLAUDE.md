@@ -198,3 +198,20 @@ Do not use git worktrees. Make all changes directly in the current working direc
 - Always ask for confirmation before running destructive database operations
 - Commit frequently with clear, descriptive commit messages
 - Supabase project ID: dbvuptwcjudfpimjxfei
+
+## Platform Requirements
+
+Every feature must work on both iOS (Expo Go) and web unless explicitly noted otherwise.
+
+When building any UI feature:
+- Use platform detection (`Platform.OS`) to serve the right experience on each platform
+- Native-only APIs (camera, image picker, file system) need web fallbacks
+- Web-only APIs need native fallbacks
+- Test the mental model for both: "does this work if someone opens it in a browser?" and "does this work in Expo Go on an iPhone?"
+
+Common patterns:
+- Photo/file picking: `expo-image-picker` on native, `<input type="file">` on web
+- Camera: native only — show a "mobile only" message on web
+- Keyboard avoidance: `KeyboardAvoidingView` with `Platform.OS === 'ios' ? 'padding' : 'height'`
+- Linking/sharing: `Linking.openURL()` works on both
+- Orientation lock: use the `.native.ts` / `.ts` file pair pattern
