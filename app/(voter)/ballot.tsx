@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
+import type { Candidate } from '@/lib/types';
 
-interface Candidate {
+interface CivicCandidate {
   name: string;
   party?: string;
   candidateUrl?: string;
@@ -12,7 +14,7 @@ interface Candidate {
 interface Contest {
   type: string;
   office?: string;
-  candidates?: Candidate[];
+  candidates?: CivicCandidate[];
   district?: { name: string };
   referendumTitle?: string;
   referendumSubtitle?: string;
@@ -21,6 +23,21 @@ interface Contest {
 interface CivicResponse {
   contests?: Contest[];
   election?: { name: string; electionDay: string };
+  error?: { message: string };
+}
+
+function groupCandidatesIntoContests(candidates: Candidate[]): Contest[] {
+  const byOffice = new Map<string, CivicCandidate[]>();
+  for (const c of candidates) {
+    const office = c.office_sought || 'Unknown Office';
+    if (!byOffice.has(office)) byOffice.set(office, []);
+    byOffice.get(office)!.push({ name: c.name, party: c.party ?? undefined });
+  }
+  return Array.from(byOffice.entries()).map(([office, civicCandidates]) => ({
+    type: 'General',
+    office,
+    candidates: civicCandidates,
+  }));
 }
 
 export default function BallotScreen() {
@@ -29,6 +46,7 @@ export default function BallotScreen() {
   const [electionName, setElectionName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDemo, setIsDemo] = useState(false);
 
   useEffect(() => {
     if (!address) return;
@@ -45,19 +63,36 @@ export default function BallotScreen() {
 
     fetch(url)
       .then((res) => res.json())
-      .then((data: CivicResponse & { error?: { message: string } }) => {
+      .then(async (data: CivicResponse) => {
         if (data.error) {
-          setError(data.error.message || 'Could not load ballot data for this address.');
-        } else {
-          setContests(data.contests ?? []);
+          // API-level error (bad key, invalid address, etc.) — fall through to demo
+        } else if (data.contests && data.contests.length > 0) {
+          setContests(data.contests);
           setElectionName(data.election?.name ?? '');
+          return;
         }
+        // No live contests — load demo ballot from Supabase
+        await loadDemoBallot();
       })
-      .catch(() => {
-        setError('Failed to reach the voter information service. Please check your connection and try again.');
+      .catch(async () => {
+        // Network failure — still try to show demo data
+        await loadDemoBallot();
       })
       .finally(() => setLoading(false));
   }, [address]);
+
+  async function loadDemoBallot() {
+    const { data, error: dbError } = await supabase
+      .from('candidates')
+      .select('id, name, office_sought, party')
+      .eq('profile_approved', true);
+
+    if (!dbError && data && data.length > 0) {
+      setContests(groupCandidatesIntoContests(data as Candidate[]));
+      setIsDemo(true);
+    }
+    // If Supabase also returns nothing, contests stays [] and empty state renders
+  }
 
   if (loading) {
     return (
@@ -87,6 +122,14 @@ export default function BallotScreen() {
         {electionName ? <Text style={styles.electionName}>{electionName}</Text> : null}
         <Text style={styles.headerAddress} numberOfLines={2}>{address}</Text>
       </View>
+
+      {isDemo && (
+        <View style={styles.demoBanner}>
+          <Text style={styles.demoBannerText}>
+            Demo mode — no live election data found for this address. Showing candidates from our platform so you can preview the voter experience.
+          </Text>
+        </View>
+      )}
 
       {contests.length === 0 ? (
         <View style={styles.empty}>
@@ -194,6 +237,18 @@ const styles = StyleSheet.create({
   headerAddress: {
     fontSize: 13,
     color: Colors.textSecondary,
+  },
+  demoBanner: {
+    backgroundColor: '#fff8e1',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f9e0a0',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  demoBannerText: {
+    fontSize: 13,
+    color: '#92620a',
+    lineHeight: 18,
   },
   list: {
     padding: 16,
