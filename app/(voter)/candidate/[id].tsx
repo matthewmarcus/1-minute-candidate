@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Linking, Platform, Image } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
+import Svg, { Path } from 'react-native-svg';
 import { supabase } from '@/lib/supabase';
 import { VideoPlayer } from '@/components/VideoPlayer';
+import { Header } from '@/components/Header';
 import { Colors } from '@/constants/Colors';
 import type { Candidate, Video } from '@/lib/types';
 
@@ -99,15 +101,27 @@ function UnlistedVideoThumbnail({ videoId, youtubeUrl }: { videoId: string; yout
   );
 }
 
+function XLogoIcon({ size = 22, color = Colors.primary }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+      <Path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.742l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.912-5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </Svg>
+  );
+}
+
+type SocialLink =
+  | { key: 'website' | 'facebook'; url: string; icon: React.ComponentProps<typeof Ionicons>['name']; label: string; isX?: false }
+  | { key: 'twitter'; url: string; icon: null; label: string; isX: true };
+
 function SocialLinks({ candidate }: { candidate: Candidate }) {
-  const links: { key: string; url: string; icon: React.ComponentProps<typeof Ionicons>['name']; label: string }[] = [];
+  const links: SocialLink[] = [];
 
   if (candidate.website_url) {
     links.push({ key: 'website', url: candidate.website_url, icon: 'globe-outline', label: 'Website' });
   }
   if (candidate.twitter_handle) {
     const handle = candidate.twitter_handle.replace(/^@/, '');
-    links.push({ key: 'twitter', url: `https://x.com/${handle}`, icon: 'logo-twitter', label: 'X / Twitter' });
+    links.push({ key: 'twitter', url: `https://x.com/${handle}`, icon: null, label: 'X', isX: true });
   }
   if (candidate.facebook_url) {
     links.push({ key: 'facebook', url: candidate.facebook_url, icon: 'logo-facebook', label: 'Facebook' });
@@ -125,7 +139,9 @@ function SocialLinks({ candidate }: { candidate: Candidate }) {
           accessibilityLabel={link.label}
           accessibilityRole="link"
         >
-          <Ionicons name={link.icon} size={22} color={Colors.primary} />
+          {link.isX
+            ? <XLogoIcon size={22} color={Colors.primary} />
+            : <Ionicons name={link.icon!} size={22} color={Colors.primary} />}
         </TouchableOpacity>
       ))}
     </View>
@@ -157,10 +173,14 @@ function ShareButtons({ candidate }: { candidate: Candidate }) {
     Linking.openURL(`https://www.facebook.com/sharer/sharer.php?u=${url}`);
   };
 
-  const buttons: { label: string; icon: React.ComponentProps<typeof Ionicons>['name']; onPress: () => void }[] = [
+  type ShareBtn =
+    | { label: string; icon: React.ComponentProps<typeof Ionicons>['name']; onPress: () => void; isX?: false }
+    | { label: string; icon: null; onPress: () => void; isX: true };
+
+  const buttons: ShareBtn[] = [
     { label: 'Copy Link', icon: 'link-outline', onPress: handleCopyLink },
     { label: 'SMS', icon: 'chatbubble-outline', onPress: handleSMS },
-    { label: 'X / Twitter', icon: 'logo-twitter', onPress: handleTwitter },
+    { label: 'X', icon: null, onPress: handleTwitter, isX: true },
     { label: 'Facebook', icon: 'logo-facebook', onPress: handleFacebook },
   ];
 
@@ -175,7 +195,9 @@ function ShareButtons({ candidate }: { candidate: Candidate }) {
             onPress={btn.onPress}
             accessibilityLabel={btn.label}
           >
-            <Ionicons name={btn.icon} size={20} color={Colors.primary} />
+            {btn.isX
+              ? <XLogoIcon size={20} color={Colors.primary} />
+              : <Ionicons name={btn.icon!} size={20} color={Colors.primary} />}
             <Text style={styles.shareButtonLabel}>{btn.label}</Text>
           </TouchableOpacity>
         ))}
@@ -227,6 +249,8 @@ export default function CandidateProfileScreen() {
   }
 
   return (
+    <View style={styles.outerContainer}>
+      <Header showBack onBack={() => router.back()} />
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {video?.youtube_url && (
         video.youtube_privacy === 'public'
@@ -256,8 +280,17 @@ export default function CandidateProfileScreen() {
           </View>
         </View>
 
-        {candidate.district && (
-          <Text style={styles.district}>{candidate.district}</Text>
+        {(candidate.city || candidate.state || candidate.district) && (
+          <Text style={styles.district}>
+            {[
+              candidate.city && candidate.state
+                ? `${candidate.city}, ${candidate.state}`
+                : candidate.city || candidate.state || null,
+              candidate.district,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </Text>
         )}
 
         <SocialLinks candidate={candidate} />
@@ -280,10 +313,15 @@ export default function CandidateProfileScreen() {
 
       <ShareButtons candidate={candidate} />
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  outerContainer: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.background,

@@ -14,7 +14,8 @@ import { router } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
-import { CandidateTabBar } from '@/components/CandidateTabBar';
+import { Header } from '@/components/Header';
+import { CandidateNav } from '@/components/CandidateNav';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import type { Candidate, Video } from '@/lib/types';
 
@@ -28,19 +29,6 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
-function NavBar({ name, onSignOut }: { name: string; onSignOut: () => void }) {
-  return (
-    <View style={styles.navBar}>
-      <Text style={styles.navLogo}>1MC</Text>
-      <View style={styles.navRight}>
-        <Text style={styles.navName} numberOfLines={1}>{name}</Text>
-        <TouchableOpacity onPress={onSignOut} style={styles.logoutBtn}>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-}
 
 function SubscriptionBadge({ status }: { status: string }) {
   const isActive = status === 'active';
@@ -277,7 +265,8 @@ export default function CandidateDashboard() {
 
   return (
     <View style={styles.rootContainer}>
-      <NavBar name={name} onSignOut={signOut} />
+      <Header />
+      <CandidateNav activeTab="dashboard" />
 
       <ScrollView
         style={styles.scrollView}
@@ -349,8 +338,6 @@ export default function CandidateDashboard() {
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
-
-      <CandidateTabBar />
     </View>
   );
 }
@@ -365,46 +352,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: Colors.background,
-  },
-
-  // Nav bar
-  navBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    paddingTop: Platform.OS === 'ios' ? 52 : 14,
-  },
-  navLogo: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#fff',
-    letterSpacing: 1,
-  },
-  navRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    maxWidth: '70%',
-  },
-  navName: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.85)',
-    fontWeight: '500',
-    flexShrink: 1,
-  },
-  logoutBtn: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  logoutText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '600',
   },
 
   // Scroll

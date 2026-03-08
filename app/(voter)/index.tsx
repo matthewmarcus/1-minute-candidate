@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView 
 import { router } from 'expo-router';
 import * as Location from 'expo-location';
 import { Colors } from '@/constants/Colors';
+import { Header } from '@/components/Header';
 
 export default function VoterHome() {
   const [address, setAddress] = useState('');
@@ -38,9 +39,10 @@ export default function VoterHome() {
   }
 
   return (
+    <View style={styles.outerContainer}>
+      <Header />
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.hero}>
-        <Text style={styles.logo}>1 Minute Candidate</Text>
         <Text style={styles.tagline}>Know who's on your ballot. In 60 seconds.</Text>
       </View>
 
@@ -94,13 +96,18 @@ export default function VoterHome() {
       </View>
 
       <TouchableOpacity style={styles.candidateLink} onPress={() => router.push('/(candidate)/login')}>
-        <Text style={styles.candidateLinkText}>Are you a candidate? Get started →</Text>
+        <Text style={styles.candidateLinkText}>Are you a candidate? Sign in →</Text>
       </TouchableOpacity>
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  outerContainer: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.background,

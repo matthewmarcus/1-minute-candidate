@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView,
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
+import { Header } from '@/components/Header';
 
 export default function CandidateRegister() {
   const [form, setForm] = useState({
@@ -67,6 +68,7 @@ export default function CandidateRegister() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <Header showBack onBack={() => router.replace('/(voter)')} />
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Create Account</Text>
         <Text style={styles.subtitle}>Register as a candidate</Text>

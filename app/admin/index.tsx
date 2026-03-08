@@ -3,6 +3,8 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator }
 import { router, useFocusEffect } from 'expo-router';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { Colors } from '@/constants/Colors';
+import { Header } from '@/components/Header';
+import { fonts } from '@/constants/fonts';
 import type { Video } from '@/lib/types';
 
 type VideoWithCandidate = Video & {
@@ -36,8 +38,23 @@ export default function AdminDashboard() {
     );
   }
 
+  function SignOutButton() {
+    return (
+      <TouchableOpacity
+        onPress={() => {
+          supabaseAdmin.auth.signOut();
+          router.replace('/admin/login');
+        }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Text style={styles.signOutText}>Sign Out</Text>
+      </TouchableOpacity>
+    );
+  }
+
   return (
     <View style={styles.container}>
+      <Header rightContent={<SignOutButton />} />
       <View style={styles.header}>
         <Text style={styles.title}>Review Queue</Text>
         <Text style={styles.count}>{pendingVideos.length} pending</Text>
@@ -77,6 +94,11 @@ export default function AdminDashboard() {
 }
 
 const styles = StyleSheet.create({
+  signOutText: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 13,
+    fontFamily: fonts.semiBold,
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.background,
