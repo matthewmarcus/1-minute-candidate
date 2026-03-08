@@ -24,11 +24,11 @@ export default function CandidateLayout() {
 
   return (
     <Stack>
-      <Stack.Screen name="index" options={{ title: 'Dashboard' }} />
+      <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="register" options={{ title: 'Register', headerShown: false }} />
       <Stack.Screen name="login" options={{ title: 'Login', headerShown: false }} />
       <Stack.Screen name="record" options={{ title: 'Record Video', headerShown: false }} />
-      <Stack.Screen name="profile" options={{ title: 'My Profile' }} />
+      <Stack.Screen name="profile" options={{ headerShown: false }} />
       <Stack.Screen name="subscribe" options={{ title: 'Subscribe' }} />
     </Stack>
   );

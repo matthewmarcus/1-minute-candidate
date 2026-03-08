@@ -15,6 +15,11 @@ export interface Candidate {
   stripe_customer_id: string | null;
   profile_approved: boolean;
   created_at: string;
+  photo_url: string | null;
+  website_url: string | null;
+  twitter_handle: string | null;
+  facebook_url: string | null;
+  phone: string | null;
 }
 
 export interface Video {
