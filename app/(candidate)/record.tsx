@@ -8,6 +8,8 @@ import { useUnlockScreenOrientation, useIsLandscape } from '@/hooks/useScreenOri
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { Colors } from '@/constants/Colors';
+import { Header } from '@/components/Header';
+import { CandidateNav } from '@/components/CandidateNav';
 import { MAX_RECORDING_SECONDS } from '@/constants/Config';
 
 type RecordingState = 'tips' | 'idle' | 'recording' | 'preview';
@@ -50,14 +52,18 @@ export default function RecordScreen() {
   // Web does not support native camera or file system modules — show a fallback.
   if (Platform.OS === 'web') {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.webUnsupportedTitle}>Mobile Only</Text>
-        <Text style={styles.webUnsupportedText}>
-          Video recording is only available on the mobile app. Download the app to record and submit your candidate video.
-        </Text>
-        <TouchableOpacity style={styles.button} onPress={() => router.replace('/(candidate)')}>
-          <Text style={styles.buttonText}>Go Back</Text>
-        </TouchableOpacity>
+      <View style={styles.webContainer}>
+        <Header />
+        <CandidateNav activeTab="record" />
+        <View style={styles.centered}>
+          <Text style={styles.webUnsupportedTitle}>Mobile Only</Text>
+          <Text style={styles.webUnsupportedText}>
+            Video recording is only available on the mobile app. Download the app to record and submit your candidate video.
+          </Text>
+          <TouchableOpacity style={styles.button} onPress={() => router.replace('/(candidate)')}>
+            <Text style={styles.buttonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -222,6 +228,8 @@ export default function RecordScreen() {
   if (recordingState === 'tips') {
     return (
       <View style={styles.tipsScreen}>
+        <Header />
+        <CandidateNav activeTab="record" />
         <ScrollView contentContainerStyle={styles.tipsScrollContent} showsVerticalScrollIndicator={false}>
           <Text style={styles.tipsScreenTitle}>Before You Record</Text>
 
@@ -424,6 +432,12 @@ export default function RecordScreen() {
 }
 
 const styles = StyleSheet.create({
+  // --- Web container ---
+  webContainer: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+
   // --- Tips screen ---
   tipsScreen: {
     flex: 1,

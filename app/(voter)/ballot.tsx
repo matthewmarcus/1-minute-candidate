@@ -4,6 +4,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { Colors } from '@/constants/Colors';
+import { Header } from '@/components/Header';
 import type { Candidate } from '@/lib/types';
 
 interface CivicCandidate {
@@ -173,6 +174,7 @@ export default function BallotScreen() {
 
   return (
     <View style={styles.container}>
+      <Header showBack onBack={() => router.replace('/(voter)')} />
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Your Ballot</Text>
         {electionName ? <Text style={styles.electionName}>{electionName}</Text> : null}

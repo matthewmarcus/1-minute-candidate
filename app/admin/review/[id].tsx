@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert, ScrollView,
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { VideoPlayer } from '@/components/VideoPlayer';
+import { Header } from '@/components/Header';
 import { Colors } from '@/constants/Colors';
 import type { Video } from '@/lib/types';
 
@@ -251,6 +252,8 @@ export default function ReviewVideoScreen() {
   }
 
   return (
+    <View style={styles.outerContainer}>
+      <Header showBack onBack={() => router.replace('/admin')} />
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {storageVideoUrl ? (
         <StorageVideoPlayer url={storageVideoUrl} />
@@ -341,10 +344,15 @@ export default function ReviewVideoScreen() {
         </View>
       )}
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  outerContainer: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.background,

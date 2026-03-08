@@ -18,7 +18,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { Colors } from '@/constants/Colors';
-import { CandidateTabBar } from '@/components/CandidateTabBar';
+import { Header } from '@/components/Header';
+import { CandidateNav } from '@/components/CandidateNav';
 import type { Candidate } from '@/lib/types';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -357,12 +358,8 @@ export default function CandidateProfile() {
       style={styles.rootContainer}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      {/* Top nav bar */}
-      <View style={styles.navBar}>
-        <Text style={styles.navLogo}>1MC</Text>
-        <Text style={styles.navTitle}>Edit Profile</Text>
-        <View style={{ width: 48 }} />
-      </View>
+      <Header />
+      <CandidateNav activeTab="profile" />
 
       {toast && <Toast message={toast.message} type={toast.type} />}
 
@@ -484,7 +481,7 @@ export default function CandidateProfile() {
           </View>
 
           <View style={styles.fieldContainer} onLayout={(e) => onFieldLayout('twitter', e)}>
-            <Text style={styles.label}>Twitter / X Handle</Text>
+            <Text style={styles.label}>X Handle</Text>
             <View style={styles.inputWithPrefix}>
               <Text style={styles.inputPrefix}>@</Text>
               <TextInput
@@ -529,8 +526,6 @@ export default function CandidateProfile() {
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
-
-      <CandidateTabBar />
     </KeyboardAvoidingView>
   );
 }
@@ -545,29 +540,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: Colors.background,
-  },
-
-  // Nav
-  navBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    paddingTop: Platform.OS === 'ios' ? 52 : 14,
-  },
-  navLogo: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#fff',
-    letterSpacing: 1,
-    width: 48,
-  },
-  navTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#fff',
   },
 
   // Toast

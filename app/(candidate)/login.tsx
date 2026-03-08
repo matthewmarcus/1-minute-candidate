@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvo
 import { Link, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
+import { Header } from '@/components/Header';
 
 export default function CandidateLogin() {
   const [email, setEmail] = useState('');
@@ -31,6 +32,7 @@ export default function CandidateLogin() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <Header showBack onBack={() => router.replace('/(voter)')} />
       <View style={styles.inner}>
         <Text style={styles.title}>Candidate Login</Text>
         <Text style={styles.subtitle}>1 Minute Candidate</Text>
