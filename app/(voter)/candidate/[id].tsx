@@ -280,14 +280,9 @@ export default function CandidateProfileScreen() {
           </View>
         </View>
 
-        {(candidate.city || candidate.state || candidate.district) && (
+        {(candidate.city || candidate.district) && (
           <Text style={styles.district}>
-            {[
-              candidate.city && candidate.state
-                ? `${candidate.city}, ${candidate.state}`
-                : candidate.city || candidate.state || null,
-              candidate.district,
-            ]
+            {[candidate.city || null, candidate.district || null]
               .filter(Boolean)
               .join(' · ')}
           </Text>

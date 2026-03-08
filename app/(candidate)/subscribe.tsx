@@ -1,9 +1,13 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { router } from 'expo-router';
 import { Colors } from '@/constants/Colors';
 import { SUBSCRIPTION_TIERS } from '@/constants/Config';
+import { Header } from '@/components/Header';
 
 export default function SubscribeScreen() {
   return (
+    <View style={styles.outerContainer}>
+      <Header showBack onBack={() => router.back()} />
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Choose Your Plan</Text>
       <Text style={styles.subtitle}>
@@ -27,10 +31,15 @@ export default function SubscribeScreen() {
         Payments are processed securely via Stripe. Your subscription covers one full election cycle.
       </Text>
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  outerContainer: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.background,
