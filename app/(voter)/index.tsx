@@ -66,6 +66,13 @@ export default function VoterHome() {
           </Text>
         </TouchableOpacity>
 
+        <TouchableOpacity
+          style={styles.testAddressButton}
+          onPress={() => setAddress('900 N Oyster Bay Rd, Bethpage, NY 11714')}
+        >
+          <Text style={styles.testAddressText}>Use test address</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.searchButton} onPress={findCandidates}>
           <Text style={styles.searchButtonText}>Find My Ballot</Text>
         </TouchableOpacity>
@@ -186,6 +193,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: Colors.text,
     flex: 1,
+  },
+  testAddressButton: {
+    alignItems: 'center',
+    paddingVertical: 6,
+    marginBottom: 12,
+  },
+  testAddressText: {
+    color: Colors.textSecondary,
+    fontSize: 13,
+    textDecorationLine: 'underline',
   },
   candidateLink: {
     alignItems: 'center',
