@@ -9,6 +9,7 @@ interface CivicCandidate {
   name: string;
   party?: string;
   candidateUrl?: string;
+  candidateId?: string; // set for our own DB candidates; absent for Civic API candidates
 }
 
 interface Contest {
@@ -31,7 +32,7 @@ function groupCandidatesIntoContests(candidates: Candidate[]): Contest[] {
   for (const c of candidates) {
     const office = c.office_sought || 'Unknown Office';
     if (!byOffice.has(office)) byOffice.set(office, []);
-    byOffice.get(office)!.push({ name: c.name, party: c.party ?? undefined });
+    byOffice.get(office)!.push({ name: c.name, party: c.party ?? undefined, candidateId: c.id });
   }
   return Array.from(byOffice.entries()).map(([office, civicCandidates]) => ({
     type: 'General',
@@ -174,12 +175,25 @@ function ContestCard({ contest }: { contest: Contest }) {
 
       {contest.candidates && contest.candidates.length > 0 ? (
         <View style={styles.candidateList}>
-          {contest.candidates.map((c, i) => (
-            <View key={i} style={styles.candidateRow}>
-              <Text style={styles.candidateName}>{c.name}</Text>
-              {c.party ? <Text style={styles.candidateParty}>{c.party}</Text> : null}
-            </View>
-          ))}
+          {contest.candidates.map((c, i) => {
+            const tappable = !!c.candidateId;
+            const Row = tappable ? TouchableOpacity : View;
+            return (
+              <Row
+                key={i}
+                style={[styles.candidateRow, tappable && styles.candidateRowTappable]}
+                {...(tappable
+                  ? { onPress: () => router.push(`/(voter)/candidate/${c.candidateId}`) }
+                  : {})}
+              >
+                <Text style={styles.candidateName}>{c.name}</Text>
+                <View style={styles.candidateRowRight}>
+                  {c.party ? <Text style={styles.candidateParty}>{c.party}</Text> : null}
+                  {tappable && <Text style={styles.chevron}>›</Text>}
+                </View>
+              </Row>
+            );
+          })}
         </View>
       ) : null}
     </View>
@@ -295,6 +309,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: 4,
+  },
+  candidateRowTappable: {
+    paddingVertical: 8,
+    marginHorizontal: -4,
+    paddingHorizontal: 4,
+    borderRadius: 6,
   },
   candidateName: {
     fontSize: 14,
@@ -302,10 +323,21 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     flex: 1,
   },
+  candidateRowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   candidateParty: {
     fontSize: 13,
     color: Colors.textSecondary,
     marginLeft: 8,
+  },
+  chevron: {
+    fontSize: 20,
+    color: Colors.textSecondary,
+    lineHeight: 22,
+    marginLeft: 4,
   },
   empty: {
     flex: 1,
