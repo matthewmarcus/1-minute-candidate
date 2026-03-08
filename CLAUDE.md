@@ -6,6 +6,10 @@
 
 2. Every feature must work on both iOS (Expo Go) and web unless explicitly noted otherwise.
 
+3. For Expo-managed packages, ALWAYS use `npx expo install <package>` not `npm install`.
+   This ensures compatible versions. Applies to: react-native-svg, expo-camera, expo-av,
+   expo-image-picker, expo-clipboard, expo-font, and any other @expo/* or react-native-* package.
+
 ## What We're Building
 
 1 Minute Candidate is a dual-sided platform connecting political candidates directly with voters through short-form video. Candidates record and submit 60-second-or-less videos via a guided mobile app. Voters use the same app — or the web — to instantly find and watch videos of every candidate on their specific ballot, including while standing in line at the polling center.
