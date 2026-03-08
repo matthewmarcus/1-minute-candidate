@@ -27,6 +27,7 @@ export interface Video {
   review_notes: string | null;
   submitted_at: string | null;
   approved_at: string | null;
+  youtube_privacy: string | null;
 }
 
 export interface Election {
