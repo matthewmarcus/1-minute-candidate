@@ -67,7 +67,7 @@ export default function VoterHome() {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.searchButton} onPress={findCandidates}>
-          <Text style={styles.searchButtonText}>Find My Candidates</Text>
+          <Text style={styles.searchButtonText}>Find My Ballot</Text>
         </TouchableOpacity>
       </View>
 
