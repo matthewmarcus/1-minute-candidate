@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Platform, StatusBar } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Platform, StatusBar, useWindowDimensions } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 
 export function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const [isSignedIn, setIsSignedIn] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
 
   const isAdmin = pathname.startsWith('/admin');
 
@@ -23,7 +27,7 @@ export function Header() {
   const topPadding = Platform.OS === 'ios' ? 44 : (Platform.OS === 'android' ? StatusBar.currentHeight ?? 24 : 0);
 
   return (
-    <View style={[styles.outer, { paddingTop: topPadding }]}>
+    <View style={[styles.outer, { paddingTop: topPadding, position: 'relative', zIndex: 100 }]}>
       <View style={styles.inner}>
 
         {/* Logo + Title — tappable, goes home */}
@@ -40,39 +44,97 @@ export function Header() {
           <Text style={styles.title}>1 Minute Candidate</Text>
         </TouchableOpacity>
 
-        {/* Right nav */}
-        <View style={styles.navRow}>
+        {/* Right nav — desktop */}
+        {!isMobile && (
+          <View style={styles.navRow}>
+            {isAdmin ? (
+              <TouchableOpacity
+                onPress={() => router.push('/admin')}
+                style={styles.navLink}
+              >
+                <Text style={styles.navText}>Admin Dashboard</Text>
+              </TouchableOpacity>
+            ) : (
+              <>
+                <TouchableOpacity
+                  onPress={() => router.push('/(voter)/find')}
+                  style={styles.navLink}
+                >
+                  <Text style={styles.navText}>For Voters</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => isSignedIn
+                    ? router.push('/dashboard')
+                    : router.push('/(candidate)/login')
+                  }
+                  style={styles.navLink}
+                >
+                  <Text style={styles.navText}>For Candidates</Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            <TouchableOpacity
+              style={styles.authButton}
+              onPress={async () => {
+                if (isSignedIn) {
+                  await supabase.auth.signOut();
+                  router.replace('/(voter)');
+                } else {
+                  router.push('/(candidate)/login');
+                }
+              }}
+            >
+              <Text style={styles.authButtonText}>
+                {isSignedIn ? 'Sign Out' : 'Sign In'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Right nav — mobile hamburger */}
+        {isMobile && (
+          <TouchableOpacity onPress={() => setMenuOpen(m => !m)}>
+            <Ionicons name="menu-outline" size={28} color="#ffffff" />
+          </TouchableOpacity>
+        )}
+
+      </View>
+
+      {/* Mobile dropdown menu */}
+      {isMobile && menuOpen && (
+        <View style={styles.mobileMenu}>
           {isAdmin ? (
             <TouchableOpacity
-              onPress={() => router.push('/admin')}
-              style={styles.navLink}
+              style={styles.mobileMenuItem}
+              onPress={() => { setMenuOpen(false); router.push('/admin'); }}
             >
-              <Text style={styles.navText}>Admin Dashboard</Text>
+              <Text style={styles.mobileMenuText}>Admin Dashboard</Text>
             </TouchableOpacity>
           ) : (
             <>
               <TouchableOpacity
-                onPress={() => router.push('/(voter)/find')}
-                style={styles.navLink}
+                style={styles.mobileMenuItem}
+                onPress={() => { setMenuOpen(false); router.push('/(voter)/find'); }}
               >
-                <Text style={styles.navText}>For Voters</Text>
+                <Text style={styles.mobileMenuText}>For Voters</Text>
               </TouchableOpacity>
-
               <TouchableOpacity
-                onPress={() => isSignedIn
-                  ? router.push('/dashboard')
-                  : router.push('/(candidate)/login')
-                }
-                style={styles.navLink}
+                style={styles.mobileMenuItem}
+                onPress={() => {
+                  setMenuOpen(false);
+                  isSignedIn ? router.push('/dashboard') : router.push('/(candidate)/login');
+                }}
               >
-                <Text style={styles.navText}>For Candidates</Text>
+                <Text style={styles.mobileMenuText}>For Candidates</Text>
               </TouchableOpacity>
             </>
           )}
-
           <TouchableOpacity
-            style={styles.authButton}
+            style={styles.mobileMenuItem}
             onPress={async () => {
+              setMenuOpen(false);
               if (isSignedIn) {
                 await supabase.auth.signOut();
                 router.replace('/(voter)');
@@ -81,13 +143,12 @@ export function Header() {
               }
             }}
           >
-            <Text style={styles.authButtonText}>
+            <Text style={styles.mobileMenuText}>
               {isSignedIn ? 'Sign Out' : 'Sign In'}
             </Text>
           </TouchableOpacity>
         </View>
-
-      </View>
+      )}
     </View>
   );
 }
@@ -145,6 +206,25 @@ const styles = StyleSheet.create({
   authButtonText: {
     color: '#FFFFFF',
     fontSize: 13,
+    fontFamily: 'Quicksand_600SemiBold',
+  },
+  mobileMenu: {
+    position: 'absolute',
+    top: '100%',
+    right: 0,
+    backgroundColor: '#0F1F5C',
+    width: '100%',
+    zIndex: 1000,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.15)',
+  },
+  mobileMenuItem: {
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+  },
+  mobileMenuText: {
+    color: '#FFFFFF',
+    fontSize: 16,
     fontFamily: 'Quicksand_600SemiBold',
   },
 });
