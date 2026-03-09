@@ -80,9 +80,9 @@ export function Header() {
               onPress={async () => {
                 if (isSignedIn) {
                   await supabase.auth.signOut();
-                  router.replace('/(voter)');
+                  isAdmin ? router.replace('/admin/login') : router.replace('/(voter)');
                 } else {
-                  router.push('/(candidate)/login');
+                  isAdmin ? router.push('/admin/login') : router.push('/(candidate)/login');
                 }
               }}
             >
@@ -137,9 +137,9 @@ export function Header() {
               setMenuOpen(false);
               if (isSignedIn) {
                 await supabase.auth.signOut();
-                router.replace('/(voter)');
+                isAdmin ? router.replace('/admin/login') : router.replace('/(voter)');
               } else {
-                router.push('/(candidate)/login');
+                isAdmin ? router.push('/admin/login') : router.push('/(candidate)/login');
               }
             }}
           >
