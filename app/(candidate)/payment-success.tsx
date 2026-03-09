@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,6 +7,13 @@ import { Header } from '@/components/Header';
 import { fonts } from '@/constants/fonts';
 
 export default function PaymentSuccessScreen() {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      router.replace('/(candidate)');
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <View style={styles.root}>
       <Header variant="candidate" />
@@ -19,21 +27,17 @@ export default function PaymentSuccessScreen() {
           unlocked within a few seconds.
         </Text>
 
-        <TouchableOpacity
-          style={[styles.button, styles.buttonNavy]}
-          onPress={() => router.replace('/(candidate)')}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.buttonText}>Go to Dashboard</Text>
-        </TouchableOpacity>
+        <Text style={styles.redirectText}>Redirecting to your dashboard in a moment...</Text>
 
-        <TouchableOpacity
-          style={[styles.button, styles.buttonOutline]}
-          onPress={() => router.replace('/(candidate)/subscribe')}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.outlineButtonText}>View Purchases</Text>
-        </TouchableOpacity>
+        <View style={styles.buttonWrapper}>
+          <TouchableOpacity
+            style={[styles.button, styles.buttonNavy]}
+            onPress={() => router.replace('/(candidate)')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.buttonText}>Go to Dashboard</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -69,6 +73,19 @@ const styles = StyleSheet.create({
     marginBottom: 36,
     maxWidth: 320,
   },
+  redirectText: {
+    color: '#6B7280',
+    fontSize: 13,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 16,
+  },
+  buttonWrapper: {
+    maxWidth: 400,
+    width: '100%',
+    alignSelf: 'center',
+    marginTop: 32,
+  },
   button: {
     width: '100%',
     borderRadius: 10,
@@ -79,20 +96,10 @@ const styles = StyleSheet.create({
   buttonNavy: {
     backgroundColor: Colors.primary,
   },
-  buttonOutline: {
-    borderWidth: 1.5,
-    borderColor: Colors.primary,
-    backgroundColor: 'transparent',
-  },
   buttonText: {
     color: '#fff',
     fontSize: 15,
     fontWeight: '700',
     fontFamily: fonts.bold,
-  },
-  outlineButtonText: {
-    color: Colors.primary,
-    fontSize: 15,
-    fontWeight: '600',
   },
 });

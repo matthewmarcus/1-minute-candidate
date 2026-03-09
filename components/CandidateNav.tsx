@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { fonts } from '@/constants/fonts';
@@ -25,11 +25,6 @@ export function CandidateNav({ activeTab }: CandidateNavProps) {
   return (
     <View style={styles.container}>
       <View style={styles.innerContainer}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
         {TABS.map((tab) => {
           const active = tab.key === activeTab;
           return (
@@ -54,7 +49,6 @@ export function CandidateNav({ activeTab }: CandidateNavProps) {
         >
           <Text style={[styles.tabText, styles.signOutText]}>Sign Out</Text>
         </TouchableOpacity>
-      </ScrollView>
       </View>
     </View>
   );
@@ -67,14 +61,11 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E5E7EB',
   },
   innerContainer: {
-    width: '100%',
+    flexDirection: 'row',
     maxWidth: 680,
+    width: '100%',
     alignSelf: 'center',
-    flexDirection: 'row',
-  },
-  scrollContent: {
-    flexDirection: 'row',
-    paddingHorizontal: 4,
+    paddingHorizontal: 20,
   },
   tab: {
     paddingHorizontal: 16,
