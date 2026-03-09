@@ -24,6 +24,7 @@ export function CandidateNav({ activeTab }: CandidateNavProps) {
 
   return (
     <View style={styles.container}>
+      <View style={styles.innerContainer}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -54,6 +55,7 @@ export function CandidateNav({ activeTab }: CandidateNavProps) {
           <Text style={[styles.tabText, styles.signOutText]}>Sign Out</Text>
         </TouchableOpacity>
       </ScrollView>
+      </View>
     </View>
   );
 }
@@ -63,6 +65,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: 680,
+    alignSelf: 'center',
+    flexDirection: 'row',
   },
   scrollContent: {
     flexDirection: 'row',
