@@ -89,12 +89,12 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 4,
+    marginRight: 8,
   },
   logoText: {
     color: '#fff',
     fontSize: 18,
     fontFamily: fonts.bold,
-    marginLeft: 8,
   },
   rightSlot: {
     width: 36,
