@@ -33,6 +33,7 @@ export default function AdminLogin() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.inner}>
+        <View style={styles.contentContainer}>
         <View style={styles.badge}>
           <Text style={styles.badgeText}>ADMIN</Text>
         </View>
@@ -58,6 +59,7 @@ export default function AdminLogin() {
         >
           <Text style={styles.buttonText}>{loading ? 'Verifying...' : 'Sign In'}</Text>
         </TouchableOpacity>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
@@ -71,7 +73,12 @@ const styles = StyleSheet.create({
   inner: {
     flex: 1,
     justifyContent: 'center',
-    padding: 24,
+  },
+  contentContainer: {
+    maxWidth: 480,
+    width: '100%',
+    alignSelf: 'center',
+    paddingHorizontal: 24,
   },
   badge: {
     backgroundColor: Colors.primary,
