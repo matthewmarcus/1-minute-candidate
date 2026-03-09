@@ -264,11 +264,14 @@ export default function CandidateProfileScreen() {
     <View style={styles.outerContainer}>
       <Header />
       <PageContainer style={{ paddingHorizontal: 0 }}>
-        {/* Overview video — shown at top with no padding, full-width */}
+        {/* Overview video — centered within content column */}
         {overviewVideo?.youtube_url && (
-          overviewVideo.youtube_privacy === 'public'
-            ? <VideoPlayer youtubeUrl={overviewVideo.youtube_url} />
-            : <UnlistedVideoThumbnail videoId={overviewVideo.youtube_video_id!} youtubeUrl={overviewVideo.youtube_url} />
+          <View style={styles.overviewVideoContainer}>
+            {overviewVideo.youtube_privacy === 'public'
+              ? <VideoPlayer youtubeUrl={overviewVideo.youtube_url} />
+              : <UnlistedVideoThumbnail videoId={overviewVideo.youtube_video_id!} youtubeUrl={overviewVideo.youtube_url} />
+            }
+          </View>
         )}
 
         <View style={styles.info}>
@@ -533,6 +536,9 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontWeight: '500',
     textAlign: 'center',
+  },
+  overviewVideoContainer: {
+    alignSelf: 'center',
   },
   thumbnailContainer: {
     backgroundColor: '#000',

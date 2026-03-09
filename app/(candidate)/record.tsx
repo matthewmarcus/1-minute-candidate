@@ -400,7 +400,7 @@ export default function RecordScreen() {
         const candidateEmail = session.user.email;
         const { data: profile } = await supabase
           .from('candidates')
-          .select('name')
+          .select('name, office_sought, bio, city, state, party')
           .eq('id', candidateId)
           .single();
         const candidateName = profile?.name ?? candidateEmail ?? 'Candidate';

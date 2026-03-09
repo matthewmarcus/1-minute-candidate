@@ -193,6 +193,7 @@ function IssueVideosSection({
   purchases: { product_type: string }[];
 }) {
   const slots = countSlots(purchases, videos, 'issue');
+  const [expandedVideoId, setExpandedVideoId] = useState<string | null>(null);
 
   return (
     <View style={styles.subsection}>
@@ -219,10 +220,25 @@ function IssueVideosSection({
         <View style={styles.videoList}>
           {videos.map((v) => (
             <View key={v.id} style={styles.videoListCard}>
-              <View style={styles.videoListCardHeader}>
-                <Text style={styles.videoListCardTitle}>{v.title ?? 'Untitled'}</Text>
-                <StatusBadge status={v.status} />
-              </View>
+              <TouchableOpacity
+                onPress={() => setExpandedVideoId(expandedVideoId === v.id ? null : v.id)}
+              >
+                <View style={styles.videoListCardHeader}>
+                  <Text style={styles.videoListCardTitle}>{v.title ?? 'Untitled'}</Text>
+                  <StatusBadge status={v.status} />
+                  <Ionicons
+                    name={expandedVideoId === v.id ? 'chevron-up' : 'chevron-down'}
+                    size={16}
+                    color={Colors.textSecondary}
+                    style={{ marginLeft: 4 }}
+                  />
+                </View>
+              </TouchableOpacity>
+              {expandedVideoId === v.id && v.youtube_video_id && v.youtube_url && (
+                <View style={{ marginTop: 10 }}>
+                  <VideoPlayer youtubeUrl={v.youtube_url} />
+                </View>
+              )}
             </View>
           ))}
         </View>
@@ -248,6 +264,7 @@ function EndorsementVideosSection({
   purchases: { product_type: string }[];
 }) {
   const slots = countSlots(purchases, videos, 'endorsement');
+  const [expandedVideoId, setExpandedVideoId] = useState<string | null>(null);
 
   return (
     <View style={styles.subsection}>
@@ -274,10 +291,25 @@ function EndorsementVideosSection({
         <View style={styles.videoList}>
           {videos.map((v) => (
             <View key={v.id} style={styles.videoListCard}>
-              <View style={styles.videoListCardHeader}>
-                <Text style={styles.videoListCardTitle}>{v.title ?? 'Untitled'}</Text>
-                <StatusBadge status={v.status} />
-              </View>
+              <TouchableOpacity
+                onPress={() => setExpandedVideoId(expandedVideoId === v.id ? null : v.id)}
+              >
+                <View style={styles.videoListCardHeader}>
+                  <Text style={styles.videoListCardTitle}>{v.title ?? 'Untitled'}</Text>
+                  <StatusBadge status={v.status} />
+                  <Ionicons
+                    name={expandedVideoId === v.id ? 'chevron-up' : 'chevron-down'}
+                    size={16}
+                    color={Colors.textSecondary}
+                    style={{ marginLeft: 4 }}
+                  />
+                </View>
+              </TouchableOpacity>
+              {expandedVideoId === v.id && v.youtube_video_id && v.youtube_url && (
+                <View style={{ marginTop: 10 }}>
+                  <VideoPlayer youtubeUrl={v.youtube_url} />
+                </View>
+              )}
             </View>
           ))}
         </View>
