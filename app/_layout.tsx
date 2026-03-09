@@ -29,6 +29,7 @@ export default function RootLayout() {
         <Stack.Screen name="index" />
         <Stack.Screen name="(candidate)" />
         <Stack.Screen name="(voter)" />
+        <Stack.Screen name="dashboard" />
         <Stack.Screen name="admin" />
         <Stack.Screen name="+not-found" />
       </Stack>

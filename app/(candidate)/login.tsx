@@ -38,7 +38,7 @@ export default function CandidateLogin() {
     if (error) {
       Alert.alert('Login Failed', error.message);
     } else {
-      router.replace('/(candidate)');
+      router.replace('/dashboard');
     }
   }
 

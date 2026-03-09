@@ -3,7 +3,7 @@ import { useRouter, usePathname } from 'expo-router';
 import { Colors } from '@/constants/Colors';
 
 const TABS = [
-  { label: 'Dashboard', href: '/(candidate)/', icon: '🏠' },
+  { label: 'Dashboard', href: '/dashboard', icon: '🏠' },
   { label: 'Profile', href: '/(candidate)/profile', icon: '👤' },
   { label: 'Record', href: '/(candidate)/record', icon: '🎥' },
 ] as const;
@@ -13,8 +13,8 @@ export function CandidateTabBar() {
   const pathname = usePathname();
 
   function isActive(href: string) {
-    if (href === '/(candidate)/') {
-      return pathname === '/' || pathname === '/index' || pathname === '';
+    if (href === '/dashboard') {
+      return pathname === '/dashboard' || pathname === '/dashboard/index';
     }
     return pathname.includes(href.replace('/(candidate)', ''));
   }

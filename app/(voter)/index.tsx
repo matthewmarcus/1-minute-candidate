@@ -78,7 +78,7 @@ export default function VoterHome() {
             </Text>
             <TouchableOpacity
               style={[styles.cardBtn, { backgroundColor: RED }]}
-              onPress={() => isSignedIn ? router.push('/(candidate)') : router.push('/(candidate)/login')}
+              onPress={() => isSignedIn ? router.push('/dashboard') : router.push('/(candidate)/login')}
               activeOpacity={0.85}
             >
               <Text style={styles.cardBtnText}>Get Started</Text>
