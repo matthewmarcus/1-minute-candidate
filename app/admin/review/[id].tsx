@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert, ActivityIndicator, Platform, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { VideoPlayer } from '@/components/VideoPlayer';
+import { YouTubePlayer } from '@/components/YouTubePlayer';
 import { Header } from '@/components/Header';
 import { PageContainer } from '@/components/PageContainer';
 import { Colors } from '@/constants/Colors';
@@ -69,6 +69,9 @@ async function cleanupStorage(storagePath: string, videoId: string): Promise<voi
 
 export default function ReviewVideoScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { width } = useWindowDimensions();
+  const videoWidth = Math.min(width, 680) - 40;
+  const videoHeight = videoWidth * (9 / 16);
   const [video, setVideo] = useState<VideoWithCandidate | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
   const [loading, setLoading] = useState(true);
@@ -271,8 +274,8 @@ export default function ReviewVideoScreen() {
       <PageContainer style={{ paddingHorizontal: 0 }}>
         {storageVideoUrl ? (
           <StorageVideoPlayer url={storageVideoUrl} />
-        ) : video.youtube_url ? (
-          <VideoPlayer youtubeUrl={video.youtube_url} />
+        ) : video.youtube_url && video.youtube_video_id ? (
+          <YouTubePlayer videoId={video.youtube_video_id} width={videoWidth} height={videoHeight} />
         ) : null}
 
         <View style={styles.info}>
