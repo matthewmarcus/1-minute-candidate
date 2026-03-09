@@ -19,21 +19,44 @@ function getAdminStorage() {
   return AsyncStorage;
 }
 
+const CANDIDATE_TABS = [
+  { key: 'dashboard', label: 'Dashboard', href: '/dashboard' },
+  { key: 'profile', label: 'My Profile', href: '/(candidate)/profile' },
+  { key: 'record', label: 'Record Video', href: '/(candidate)/record' },
+  { key: 'subscribe', label: 'Billing', href: '/(candidate)/subscribe' },
+] as const;
+
+type CandidateTabKey = typeof CANDIDATE_TABS[number]['key'];
+
+function getActiveTab(pathname: string): CandidateTabKey | null {
+  if (pathname === '/dashboard' || pathname.startsWith('/dashboard')) return 'dashboard';
+  if (pathname.includes('/profile')) return 'profile';
+  if (pathname.includes('/record')) return 'record';
+  if (pathname.includes('/subscribe')) return 'subscribe';
+  return null;
+}
+
 export function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [isAdminSignedIn, setIsAdminSignedIn] = useState(false);
+  const [isCandidate, setIsCandidate] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
 
   const isAdmin = pathname.startsWith('/admin');
   const showSignOut = isSignedIn || isAdminSignedIn;
+  const activeTab = getActiveTab(pathname);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setIsSignedIn(!!session);
+      if (session) {
+        supabase.from('candidates').select('id').eq('id', session.user.id).single()
+          .then(({ data }) => setIsCandidate(!!data));
+      }
     });
 
     const adminStorage = getAdminStorage();
@@ -42,12 +65,33 @@ export function Header() {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => setIsSignedIn(!!session)
+      (_event, session) => {
+        setIsSignedIn(!!session);
+        if (session) {
+          supabase.from('candidates').select('id').eq('id', session.user.id).single()
+            .then(({ data }) => setIsCandidate(!!data));
+        } else {
+          setIsCandidate(false);
+        }
+      }
     );
     return () => subscription.unsubscribe();
   }, []);
 
   const topPadding = Platform.OS === 'ios' ? 44 : (Platform.OS === 'android' ? StatusBar.currentHeight ?? 24 : 0);
+
+  async function handleSignOut() {
+    if (isAdminSignedIn) {
+      await getAdminStorage().removeItem(ADMIN_SESSION_KEY);
+      setIsAdminSignedIn(false);
+      router.replace('/admin/login');
+    } else if (isSignedIn) {
+      await supabase.auth.signOut();
+      router.replace('/(voter)');
+    } else {
+      isAdmin ? router.push('/admin/login') : router.push('/(candidate)/login');
+    }
+  }
 
   return (
     <View style={[styles.outer, { paddingTop: topPadding, position: 'relative', zIndex: 100 }]}>
@@ -56,7 +100,11 @@ export function Header() {
         {/* Logo + Title — tappable, goes home */}
         <TouchableOpacity
           style={styles.logoRow}
-          onPress={() => isAdmin ? router.push('/admin') : router.push('/(voter)')}
+          onPress={() => {
+            if (isAdmin) router.push('/admin');
+            else if (isCandidate) router.push('/dashboard');
+            else router.push('/(voter)');
+          }}
           activeOpacity={0.8}
         >
           <Image
@@ -77,6 +125,21 @@ export function Header() {
               >
                 <Text style={styles.navText}>Admin Dashboard</Text>
               </TouchableOpacity>
+            ) : isCandidate ? (
+              <>
+                {CANDIDATE_TABS.map((tab) => {
+                  const active = activeTab === tab.key;
+                  return (
+                    <TouchableOpacity
+                      key={tab.key}
+                      onPress={() => router.push(tab.href as any)}
+                      style={[styles.navLink, active && styles.navLinkActive]}
+                    >
+                      <Text style={styles.navText}>{tab.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </>
             ) : (
               <>
                 <TouchableOpacity
@@ -100,18 +163,7 @@ export function Header() {
 
             <TouchableOpacity
               style={styles.authButton}
-              onPress={async () => {
-                if (isAdminSignedIn) {
-                  await getAdminStorage().removeItem(ADMIN_SESSION_KEY);
-                  setIsAdminSignedIn(false);
-                  router.replace('/admin/login');
-                } else if (isSignedIn) {
-                  await supabase.auth.signOut();
-                  router.replace('/(voter)');
-                } else {
-                  isAdmin ? router.push('/admin/login') : router.push('/(candidate)/login');
-                }
-              }}
+              onPress={handleSignOut}
             >
               <Text style={styles.authButtonText}>
                 {showSignOut ? 'Sign Out' : 'Sign In'}
@@ -139,6 +191,33 @@ export function Header() {
             >
               <Text style={styles.mobileMenuText}>Admin Dashboard</Text>
             </TouchableOpacity>
+          ) : isCandidate ? (
+            <>
+              <TouchableOpacity
+                style={styles.mobileMenuItem}
+                onPress={() => { setMenuOpen(false); router.push('/dashboard'); }}
+              >
+                <Text style={styles.mobileMenuText}>Dashboard</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.mobileMenuItem}
+                onPress={() => { setMenuOpen(false); router.push('/(candidate)/profile'); }}
+              >
+                <Text style={styles.mobileMenuText}>My Profile</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.mobileMenuItem}
+                onPress={() => { setMenuOpen(false); router.push('/(candidate)/record'); }}
+              >
+                <Text style={styles.mobileMenuText}>Record Video</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.mobileMenuItem}
+                onPress={() => { setMenuOpen(false); router.push('/(candidate)/subscribe'); }}
+              >
+                <Text style={styles.mobileMenuText}>Billing</Text>
+              </TouchableOpacity>
+            </>
           ) : (
             <>
               <TouchableOpacity
@@ -162,16 +241,7 @@ export function Header() {
             style={styles.mobileMenuItem}
             onPress={async () => {
               setMenuOpen(false);
-              if (isAdminSignedIn) {
-                await getAdminStorage().removeItem(ADMIN_SESSION_KEY);
-                setIsAdminSignedIn(false);
-                router.replace('/admin/login');
-              } else if (isSignedIn) {
-                await supabase.auth.signOut();
-                router.replace('/(voter)');
-              } else {
-                isAdmin ? router.push('/admin/login') : router.push('/(candidate)/login');
-              }
+              await handleSignOut();
             }}
           >
             <Text style={styles.mobileMenuText}>
@@ -217,14 +287,19 @@ const styles = StyleSheet.create({
   navRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 12,
   },
   navLink: {
     paddingVertical: 4,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  navLinkActive: {
+    borderBottomColor: '#E8192F',
   },
   navText: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: 'Quicksand_600SemiBold',
   },
   authButton: {

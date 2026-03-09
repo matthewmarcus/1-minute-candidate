@@ -1,83 +1,8 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { router } from 'expo-router';
-import { fonts } from '@/constants/fonts';
+// CandidateNav is no longer used — navigation is handled by Header.tsx.
+// This file is kept to avoid breaking any stale imports during transition.
 
-type TabName = 'dashboard' | 'profile' | 'record' | 'subscribe';
-
-interface CandidateNavProps {
-  activeTab: TabName;
+export function CandidateNav(_props: { activeTab?: string }) {
+  return null;
 }
 
-const TABS: { key: TabName; label: string; href: string }[] = [
-  { key: 'dashboard', label: 'Dashboard', href: '/dashboard' },
-  { key: 'profile', label: 'My Profile', href: '/(candidate)/profile' },
-  { key: 'record', label: 'Record Video', href: '/(candidate)/record' },
-  { key: 'subscribe', label: 'Billing', href: '/(candidate)/subscribe' },
-];
-
-export function CandidateNav({ activeTab }: CandidateNavProps) {
-  return (
-    <View style={styles.container}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          paddingHorizontal: 20,
-          gap: 24,
-        }}
-        style={{ maxWidth: 680, width: '100%', alignSelf: 'center' }}
-      >
-        {TABS.map((tab) => {
-          const active = tab.key === activeTab;
-          return (
-            <TouchableOpacity
-              key={tab.key}
-              style={styles.tab}
-              onPress={() => router.push(tab.href as any)}
-              accessibilityLabel={tab.label}
-            >
-              <Text style={[styles.tabText, active && styles.tabTextActive]}>
-                {tab.label}
-              </Text>
-              {active && <View style={styles.activeUnderline} />}
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  tab: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    position: 'relative',
-    alignItems: 'center',
-  },
-  tabText: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontFamily: fonts.semiBold,
-  },
-  tabTextActive: {
-    color: '#E8192F',
-    fontFamily: fonts.bold,
-  },
-  activeUnderline: {
-    position: 'absolute',
-    bottom: 0,
-    left: 8,
-    right: 8,
-    height: 2,
-    backgroundColor: '#E8192F',
-    borderRadius: 1,
-  },
-});
+export default CandidateNav;

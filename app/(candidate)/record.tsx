@@ -9,7 +9,6 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { Colors } from '@/constants/Colors';
 import { Header } from '@/components/Header';
-import { CandidateNav } from '@/components/CandidateNav';
 import { PageContainer } from '@/components/PageContainer';
 import { MAX_RECORDING_SECONDS } from '@/constants/Config';
 import { countSlots } from '@/lib/videoSlots';
@@ -124,7 +123,6 @@ export default function RecordScreen() {
     return (
       <View style={styles.webContainer}>
         <Header />
-        <CandidateNav activeTab="record" />
         <PageContainer style={{ paddingTop: 24 }}>
           <Text style={styles.webUploadTitle}>{getScreenTitle(videoType)}</Text>
           <Text style={styles.webUploadInstructions}>
@@ -243,7 +241,6 @@ export default function RecordScreen() {
     return (
       <View style={styles.webContainer}>
         <Header />
-        <CandidateNav activeTab="record" />
         <View style={styles.webFallbackCenter}>
           <Text style={styles.webUnsupportedTitle}>Mobile Only</Text>
           <Text style={styles.webUnsupportedText}>
@@ -443,7 +440,6 @@ export default function RecordScreen() {
     return (
       <View style={styles.tipsScreen}>
         <Header />
-        <CandidateNav activeTab="record" />
         <PageContainer style={{ paddingTop: 24 }}>
           <Text style={styles.tipsScreenTitle}>{getScreenTitle(videoType)}</Text>
 
@@ -565,7 +561,6 @@ export default function RecordScreen() {
     return (
       <View style={styles.tipsScreen}>
         <Header />
-        <CandidateNav activeTab="record" />
         <PageContainer style={{ paddingTop: 24 }}>
           <Text style={styles.tipsScreenTitle}>{getScreenTitle(videoType)}</Text>
 

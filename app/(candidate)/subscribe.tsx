@@ -15,7 +15,6 @@ import { Linking } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
 import { Header } from '@/components/Header';
-import { CandidateNav } from '@/components/CandidateNav';
 import { PageContainer } from '@/components/PageContainer';
 import { useAuth } from '@/hooks/useAuth';
 import { fonts } from '@/constants/fonts';
@@ -153,7 +152,6 @@ export default function SubscribeScreen() {
     return (
       <View style={styles.root}>
         <Header />
-        <CandidateNav activeTab="subscribe" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
         </View>
@@ -164,7 +162,6 @@ export default function SubscribeScreen() {
   return (
     <View style={styles.root}>
       <Header />
-      <CandidateNav activeTab="subscribe" />
 
       <PageContainer>
         <Text style={styles.pageTitle}>Unlock Your Campaign</Text>

@@ -17,7 +17,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
 import { Header } from '@/components/Header';
-import { CandidateNav } from '@/components/CandidateNav';
 import { PageContainer } from '@/components/PageContainer';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { countSlots } from '@/lib/videoSlots';
@@ -42,60 +41,71 @@ function getInitials(name: string): string {
 }
 
 function VideoThumbnailWithPlay({ videoId, youtubeUrl }: { videoId: string; youtubeUrl: string }) {
+  const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
+
   if (Platform.OS === 'web') {
     return (
-      // @ts-ignore — anchor is a valid web element
-      <a
-        href={youtubeUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{
-          display: 'block',
-          position: 'relative',
-          width: '100%',
-          height: 200,
-          backgroundColor: '#000',
-          textDecoration: 'none',
-          borderRadius: 8,
-          overflow: 'hidden',
-          marginBottom: 12,
-        }}
-      >
-        {/* @ts-ignore */}
-        <img
-          src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
-          alt="Video thumbnail"
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-        />
-        {/* @ts-ignore */}
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <View>
+        {/* @ts-ignore — anchor is a valid web element */}
+        <a
+          href={youtubeUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'block',
+            position: 'relative',
+            width: '100%',
+            height: 200,
+            backgroundColor: '#000',
+            textDecoration: 'none',
+            borderRadius: 8,
+            overflow: 'hidden',
+            marginBottom: 8,
+          }}
+        >
           {/* @ts-ignore */}
-          <div style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <img
+            src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
+            alt="Video thumbnail"
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+          {/* @ts-ignore */}
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {/* @ts-ignore */}
-            <div style={{ width: 0, height: 0, borderTop: '12px solid transparent', borderBottom: '12px solid transparent', borderLeft: '20px solid white', marginLeft: 5 }} />
+            <div style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {/* @ts-ignore */}
+              <div style={{ width: 0, height: 0, borderTop: '12px solid transparent', borderBottom: '12px solid transparent', borderLeft: '20px solid white', marginLeft: 5 }} />
+            </div>
           </div>
-        </div>
-      </a>
+        </a>
+        {/* @ts-ignore */}
+        <a href={youtubeUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#0F1F5C', fontSize: 13, textDecoration: 'none', display: 'block', marginBottom: 12 }}>
+          Watch on YouTube →
+        </a>
+      </View>
     );
   }
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.85}
-      onPress={() => Linking.openURL(youtubeUrl)}
-      style={styles.thumbnailContainer}
-    >
-      <Image
-        source={{ uri: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` }}
-        style={styles.videoThumbnail}
-        resizeMode="cover"
-      />
-      <View style={styles.playOverlay}>
-        <View style={styles.playButton}>
-          <View style={styles.playTriangle} />
+    <View>
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={() => Linking.openURL(watchUrl)}
+        style={styles.thumbnailContainer}
+      >
+        <Image
+          source={{ uri: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` }}
+          style={styles.videoThumbnail}
+          resizeMode="cover"
+        />
+        <View style={styles.playOverlay}>
+          <Ionicons name="play-circle-outline" size={56} color="rgba(255,255,255,0.9)" />
         </View>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => Linking.openURL(watchUrl)} style={{ marginTop: 8, marginBottom: 12 }}>
+        <Text style={styles.watchOnYouTube}>Watch on YouTube →</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -238,8 +248,8 @@ function IssueVideosSection({
                 </View>
               </TouchableOpacity>
               {expandedVideoId === v.id && v.youtube_video_id && v.youtube_url && (
-                <View style={{ width: cardWidth - 26, height: (cardWidth - 26) * (9 / 16), overflow: 'hidden', borderRadius: 8, marginTop: 12, alignSelf: 'center' }}>
-                  <VideoPlayer youtubeUrl={v.youtube_url} />
+                <View style={{ marginTop: 12 }}>
+                  <VideoThumbnailWithPlay videoId={v.youtube_video_id} youtubeUrl={v.youtube_url} />
                 </View>
               )}
             </View>
@@ -311,8 +321,8 @@ function EndorsementVideosSection({
                 </View>
               </TouchableOpacity>
               {expandedVideoId === v.id && v.youtube_video_id && v.youtube_url && (
-                <View style={{ width: cardWidth - 26, height: (cardWidth - 26) * (9 / 16), overflow: 'hidden', borderRadius: 8, marginTop: 12, alignSelf: 'center' }}>
-                  <VideoPlayer youtubeUrl={v.youtube_url} />
+                <View style={{ marginTop: 12 }}>
+                  <VideoThumbnailWithPlay videoId={v.youtube_video_id} youtubeUrl={v.youtube_url} />
                 </View>
               )}
             </View>
@@ -501,7 +511,6 @@ export default function CandidateDashboard() {
   return (
     <View style={styles.rootContainer}>
       <Header />
-      <CandidateNav activeTab="dashboard" />
 
       <PageContainer style={{ paddingTop: 8 }}>
         {/* Welcome section with avatar */}
@@ -869,11 +878,10 @@ const styles = StyleSheet.create({
   // Thumbnail with play overlay
   thumbnailContainer: {
     width: '100%',
-    height: 200,
+    aspectRatio: 16 / 9,
     borderRadius: 8,
     backgroundColor: '#000',
     overflow: 'hidden',
-    marginBottom: 12,
   },
   videoThumbnail: {
     width: '100%',
@@ -884,24 +892,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  playButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  playTriangle: {
-    width: 0,
-    height: 0,
-    borderTopWidth: 12,
-    borderBottomWidth: 12,
-    borderLeftWidth: 20,
-    borderTopColor: 'transparent',
-    borderBottomColor: 'transparent',
-    borderLeftColor: '#fff',
-    marginLeft: 5,
+  watchOnYouTube: {
+    color: '#0F1F5C',
+    fontSize: 13,
+    fontFamily: 'Quicksand_600SemiBold',
   },
 
   // Outline button
