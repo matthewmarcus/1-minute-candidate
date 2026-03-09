@@ -1,109 +1,379 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  ActivityIndicator,
+  Alert,
+  Platform,
+} from 'react-native';
 import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { Linking } from 'react-native';
+import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
-import { SUBSCRIPTION_TIERS } from '@/constants/Config';
 import { Header } from '@/components/Header';
+import { CandidateNav } from '@/components/CandidateNav';
+import { PageContainer } from '@/components/PageContainer';
+import { useAuth } from '@/hooks/useAuth';
+import { fonts } from '@/constants/fonts';
+
+type RaceLevel = 'local' | 'state' | 'national';
+
+interface Purchase {
+  id: string;
+  product_type: string;
+  amount: number;
+  created_at: string;
+}
+
+const PROFILE_PRICES: Record<RaceLevel, number> = {
+  local: 49,
+  state: 99,
+  national: 199,
+};
+
+const VIDEO_PRICES: Record<RaceLevel, number> = {
+  local: 29,
+  state: 49,
+  national: 99,
+};
+
+function formatProductType(type: string): string {
+  switch (type) {
+    case 'profile_setup':
+      return 'Profile Setup';
+    case 'issue_video':
+      return 'Issue Video';
+    case 'endorsement_video':
+      return 'Endorsement Video';
+    default:
+      return type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+}
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
 
 export default function SubscribeScreen() {
-  return (
-    <View style={styles.outerContainer}>
-      <Header variant="candidate" showBack onBack={() => router.back()} />
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Choose Your Plan</Text>
-      <Text style={styles.subtitle}>
-        Select the tier that matches your race. One-time fee per election cycle.
-      </Text>
+  const { session } = useAuth();
+  const [raceLevel, setRaceLevel] = useState<RaceLevel>('local');
+  const [profileUnlocked, setProfileUnlocked] = useState(false);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [purchasing, setPurchasing] = useState(false);
 
-      {SUBSCRIPTION_TIERS.map((tier) => (
-        <View key={tier.id} style={styles.tierCard}>
-          <View style={styles.tierHeader}>
-            <Text style={styles.tierName}>{tier.name}</Text>
-            <Text style={styles.tierPrice}>${tier.price}</Text>
-          </View>
-          <Text style={styles.tierDescription}>{tier.description}</Text>
-          <TouchableOpacity style={styles.selectButton}>
-            <Text style={styles.selectButtonText}>Select {tier.name}</Text>
-          </TouchableOpacity>
+  const load = useCallback(async () => {
+    if (!session?.user) return;
+
+    const [candidateResult, purchasesResult] = await Promise.all([
+      supabase
+        .from('candidates')
+        .select('race_level, profile_unlocked')
+        .eq('id', session.user.id)
+        .single(),
+      supabase
+        .from('purchases')
+        .select('*')
+        .eq('candidate_id', session.user.id)
+        .order('created_at', { ascending: false }),
+    ]);
+
+    if (candidateResult.data) {
+      setRaceLevel((candidateResult.data.race_level as RaceLevel) ?? 'local');
+      setProfileUnlocked(candidateResult.data.profile_unlocked ?? false);
+    }
+
+    if (purchasesResult.data) {
+      setPurchases(purchasesResult.data);
+    }
+
+    setLoading(false);
+  }, [session]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function handlePurchase(product_type: string) {
+    setPurchasing(true);
+    try {
+      const {
+        data: { session: currentSession },
+      } = await supabase.auth.getSession();
+
+      const appUrl =
+        Platform.OS === 'web'
+          ? (window as any).location.origin
+          : 'https://1minutecandidate.com';
+
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/create-checkout`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${currentSession?.access_token}`,
+          },
+          body: JSON.stringify({
+            product_type,
+            success_url: `${appUrl}/(candidate)/payment-success`,
+            cancel_url: `${appUrl}/(candidate)/subscribe`,
+          }),
+        }
+      );
+
+      const { url, error } = await response.json();
+      if (error) throw new Error(error);
+
+      await Linking.openURL(url);
+    } catch (err) {
+      Alert.alert('Error', 'Could not start checkout. Please try again.');
+    } finally {
+      setPurchasing(false);
+    }
+  }
+
+  const profilePrice = PROFILE_PRICES[raceLevel];
+  const videoPrice = VIDEO_PRICES[raceLevel];
+
+  if (loading) {
+    return (
+      <View style={styles.root}>
+        <Header variant="candidate" />
+        <CandidateNav activeTab="subscribe" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
         </View>
-      ))}
+      </View>
+    );
+  }
 
-      <Text style={styles.disclaimer}>
-        Payments are processed securely via Stripe. Your subscription covers one full election cycle.
-      </Text>
-    </ScrollView>
+  return (
+    <View style={styles.root}>
+      <Header variant="candidate" />
+      <CandidateNav activeTab="subscribe" />
+
+      <PageContainer>
+        <Text style={styles.pageTitle}>Unlock Your Campaign</Text>
+        <Text style={styles.pageSubtitle}>
+          Everything you need to connect with voters in your district.
+        </Text>
+
+        {/* SECTION 1 — Profile Setup */}
+        <View style={[styles.card, styles.cardNavyBorder]}>
+          <Text style={styles.stepLabel}>STEP 1 — REQUIRED</Text>
+          <Text style={styles.cardTitle}>Profile + Overview Video</Text>
+          <Text style={styles.cardDescription}>
+            Unlock your candidate profile page and record your 60-second overview video pitch.
+          </Text>
+
+          {profileUnlocked ? (
+            <View style={styles.unlockedRow}>
+              <Ionicons name="checkmark-circle" size={22} color={Colors.success} />
+              <Text style={styles.unlockedText}>Profile Unlocked ✓</Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={[styles.button, styles.buttonRed, purchasing && styles.buttonDisabled]}
+              onPress={() => handlePurchase('profile_setup')}
+              disabled={purchasing}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.buttonText}>
+                {purchasing ? 'Loading...' : `Unlock My Profile — $${profilePrice}`}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* SECTION 2 — Issue Videos */}
+        {profileUnlocked && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Issue Video</Text>
+            <Text style={styles.cardDescription}>
+              Record a 60-second video on a specific policy issue important to your campaign. Buy
+              as many as you need.
+            </Text>
+            <TouchableOpacity
+              style={[styles.button, styles.buttonNavy, purchasing && styles.buttonDisabled]}
+              onPress={() => handlePurchase('issue_video')}
+              disabled={purchasing}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.buttonText}>
+                {purchasing ? 'Loading...' : `Add an Issue Video — $${videoPrice}`}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* SECTION 3 — Endorsement Videos */}
+        {profileUnlocked && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Endorsement Video</Text>
+            <Text style={styles.cardDescription}>
+              Share a 60-second endorsement from a supporter, colleague, or community leader.
+            </Text>
+            <TouchableOpacity
+              style={[styles.button, styles.buttonNavy, purchasing && styles.buttonDisabled]}
+              onPress={() => handlePurchase('endorsement_video')}
+              disabled={purchasing}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.buttonText}>
+                {purchasing ? 'Loading...' : `Add an Endorsement Video — $${videoPrice}`}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* SECTION 4 — Purchase History */}
+        {purchases.length > 0 && (
+          <View style={styles.historySection}>
+            <Text style={styles.historyTitle}>Purchase History</Text>
+            {purchases.map((p) => (
+              <View key={p.id} style={styles.historyRow}>
+                <Text style={styles.historyItem}>
+                  {formatProductType(p.product_type)}
+                  {' · '}
+                  {formatDate(p.created_at)}
+                  {p.amount ? ` · $${p.amount}` : ''}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        <View style={{ height: 32 }} />
+      </PageContainer>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  outerContainer: {
+  root: {
     flex: 1,
     backgroundColor: Colors.background,
   },
-  container: {
+  loadingContainer: {
     flex: 1,
-    backgroundColor: Colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  content: {
-    padding: 24,
-    paddingBottom: 40,
-  },
-  title: {
+
+  pageTitle: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: Colors.primary,
-    marginBottom: 8,
+    fontFamily: fonts.bold,
+    marginBottom: 6,
+    marginTop: 8,
   },
-  subtitle: {
+  pageSubtitle: {
     fontSize: 15,
     color: Colors.textSecondary,
-    marginBottom: 28,
     lineHeight: 22,
+    marginBottom: 24,
   },
-  tierCard: {
+
+  // Cards
+  card: {
     backgroundColor: Colors.card,
     borderRadius: 12,
     padding: 20,
     marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  tierHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  cardNavyBorder: {
+    borderTopWidth: 4,
+    borderTopColor: Colors.primary,
+  },
+
+  stepLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.accent,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
     marginBottom: 8,
   },
-  tierName: {
-    fontSize: 20,
+  cardTitle: {
+    fontSize: 18,
     fontWeight: '700',
     color: Colors.text,
+    marginBottom: 6,
+    fontFamily: fonts.bold,
   },
-  tierPrice: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: Colors.primary,
-  },
-  tierDescription: {
+  cardDescription: {
     fontSize: 14,
     color: Colors.textSecondary,
-    marginBottom: 16,
     lineHeight: 20,
+    marginBottom: 16,
   },
-  selectButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: 8,
-    paddingVertical: 12,
+
+  // Unlocked state
+  unlockedRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+    paddingVertical: 4,
   },
-  selectButtonText: {
-    color: '#fff',
+  unlockedText: {
     fontSize: 15,
     fontWeight: '600',
+    color: Colors.success,
   },
-  disclaimer: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    textAlign: 'center',
+
+  // Buttons
+  button: {
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  buttonRed: {
+    backgroundColor: Colors.accent,
+  },
+  buttonNavy: {
+    backgroundColor: Colors.primary,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+    fontFamily: fonts.bold,
+  },
+
+  // Purchase history
+  historySection: {
     marginTop: 8,
-    lineHeight: 18,
+  },
+  historyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.text,
+    marginBottom: 12,
+    fontFamily: fonts.bold,
+  },
+  historyRow: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  historyItem: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    lineHeight: 20,
   },
 });
