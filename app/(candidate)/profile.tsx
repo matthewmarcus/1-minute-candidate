@@ -375,6 +375,16 @@ export default function CandidateProfile() {
         {/* ── Section 1: About You ─────────────────────────────────────── */}
         <Text style={styles.sectionHeader}>About You</Text>
         <View style={styles.card} onLayout={(e) => onCardLayout('about', e)}>
+          <View style={{ marginBottom: 16 }}>
+            <Text style={styles.label}>Candidate Photo</Text>
+            <PhotoUpload
+              photoUrl={profile.photo_url ?? null}
+              candidateId={session?.user?.id ?? ''}
+              onUpload={(url) => set('photo_url', url)}
+              onError={(msg) => showToast(msg, 'error')}
+            />
+          </View>
+
           <View style={styles.fieldContainer} onLayout={(e) => onFieldLayout('bio', e)}>
             <Text style={styles.label}>Bio</Text>
             <TextInput
@@ -391,14 +401,6 @@ export default function CandidateProfile() {
               onFocus={() => scrollToField('about', 'bio')}
             />
           </View>
-
-          <Text style={styles.label}>Candidate Photo</Text>
-          <PhotoUpload
-            photoUrl={profile.photo_url ?? null}
-            candidateId={session?.user?.id ?? ''}
-            onUpload={(url) => set('photo_url', url)}
-            onError={(msg) => showToast(msg, 'error')}
-          />
         </View>
 
         {/* ── Section 2: Your Campaign ──────────────────────────────────── */}
