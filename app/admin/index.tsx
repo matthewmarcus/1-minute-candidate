@@ -54,7 +54,7 @@ export default function AdminDashboard() {
 
   return (
     <View style={styles.container}>
-      <Header variant="admin" rightContent={<SignOutButton />} />
+      <Header />
       <View style={styles.contentWrapper}>
         <View style={styles.header}>
           <Text style={styles.title}>Review Queue</Text>

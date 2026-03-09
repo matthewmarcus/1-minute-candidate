@@ -174,7 +174,7 @@ export default function BallotScreen() {
 
   return (
     <View style={styles.container}>
-      <Header variant="voter" showBack onBack={() => router.replace('/(voter)')} />
+      <Header />
       <View style={styles.contentWrapper}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Your Ballot</Text>

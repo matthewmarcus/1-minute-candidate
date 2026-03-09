@@ -152,7 +152,7 @@ export default function SubscribeScreen() {
   if (loading) {
     return (
       <View style={styles.root}>
-        <Header variant="candidate" />
+        <Header />
         <CandidateNav activeTab="subscribe" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
@@ -163,7 +163,7 @@ export default function SubscribeScreen() {
 
   return (
     <View style={styles.root}>
-      <Header variant="candidate" />
+      <Header />
       <CandidateNav activeTab="subscribe" />
 
       <PageContainer>

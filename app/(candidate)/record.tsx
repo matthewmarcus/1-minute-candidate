@@ -68,7 +68,7 @@ export default function RecordScreen() {
 
     return (
       <View style={styles.webContainer}>
-        <Header variant="candidate" />
+        <Header />
         <CandidateNav activeTab="record" />
         <PageContainer style={{ paddingTop: 24 }}>
           <Text style={styles.webUploadTitle}>Upload Endorsement Video</Text>
@@ -163,7 +163,7 @@ export default function RecordScreen() {
   if (Platform.OS === 'web') {
     return (
       <View style={styles.webContainer}>
-        <Header variant="candidate" />
+        <Header />
         <CandidateNav activeTab="record" />
         <View style={styles.webFallbackCenter}>
           <Text style={styles.webUnsupportedTitle}>Mobile Only</Text>
@@ -357,7 +357,7 @@ export default function RecordScreen() {
   if (videoType === 'endorsement' && recordingState !== 'preview') {
     return (
       <View style={styles.tipsScreen}>
-        <Header variant="candidate" />
+        <Header />
         <CandidateNav activeTab="record" />
         <PageContainer style={{ paddingTop: 24 }}>
           <Text style={styles.tipsScreenTitle}>Upload Endorsement Video</Text>
@@ -449,7 +449,7 @@ export default function RecordScreen() {
   if (recordingState === 'tips') {
     return (
       <View style={styles.tipsScreen}>
-        <Header variant="candidate" />
+        <Header />
         <CandidateNav activeTab="record" />
         <PageContainer style={{ paddingTop: 24 }}>
           <Text style={styles.tipsScreenTitle}>Before You Record</Text>

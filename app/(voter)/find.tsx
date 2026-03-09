@@ -59,7 +59,7 @@ export default function FindScreen() {
 
   return (
     <View style={styles.root}>
-      <Header variant="voter" showBack onBack={() => router.replace('/(voter)')} />
+      <Header />
 
       <KeyboardAvoidingView
         style={styles.flex}

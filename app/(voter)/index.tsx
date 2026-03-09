@@ -34,7 +34,7 @@ export default function VoterHome() {
 
   return (
     <View style={styles.root}>
-      <Header variant="voter" />
+      <Header />
 
       <PageContainer style={{ paddingHorizontal: 0 }}>
         {/* ── Hero ── */}
