@@ -251,7 +251,7 @@ export default function CandidateProfileScreen() {
 
   return (
     <View style={styles.outerContainer}>
-      <Header showBack onBack={() => router.back()} />
+      <Header variant="voter" showBack onBack={() => router.back()} />
       <PageContainer style={{ paddingHorizontal: 0 }}>
         {video?.youtube_url && (
           video.youtube_privacy === 'public'
