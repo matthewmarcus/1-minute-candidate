@@ -1,15 +1,41 @@
-import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
+import { useState, useRef } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ScrollView,
+  useWindowDimensions,
+  Platform,
+} from 'react-native';
 import { router } from 'expo-router';
 import * as Location from 'expo-location';
-import { Colors } from '@/constants/Colors';
+import { Ionicons } from '@expo/vector-icons';
 import { Header } from '@/components/Header';
+import { fonts } from '@/constants/fonts';
+
+const NAVY = '#0F1F5C';
+const RED = '#E8192F';
+const GRAY = '#6B7280';
+const BORDER = '#E5E7EB';
+const LIGHT_BG = '#F9FAFB';
 
 export default function VoterHome() {
   const [address, setAddress] = useState('');
   const [locating, setLocating] = useState(false);
+  const { width } = useWindowDimensions();
+  const isWide = width >= 600;
+  const addressInputRef = useRef<TextInput>(null);
+  const scrollRef = useRef<ScrollView>(null);
 
   async function useMyLocation() {
+    if (Platform.OS === 'web') {
+      Alert.alert('Location', 'Please type your address below.');
+      addressInputRef.current?.focus();
+      return;
+    }
     setLocating(true);
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') {
@@ -17,10 +43,8 @@ export default function VoterHome() {
       Alert.alert('Permission Denied', 'Location permission is needed to find your ballot.');
       return;
     }
-
     const location = await Location.getCurrentPositionAsync({});
     const [place] = await Location.reverseGeocodeAsync(location.coords);
-
     if (place) {
       const formatted = [place.streetNumber, place.street, place.city, place.region, place.postalCode]
         .filter(Boolean)
@@ -38,241 +62,329 @@ export default function VoterHome() {
     router.push({ pathname: '/(voter)/ballot', params: { address } });
   }
 
+  function scrollToAddress() {
+    addressInputRef.current?.focus();
+  }
+
   return (
-    <View style={styles.outerContainer}>
+    <View style={styles.root}>
       <Header />
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.hero}>
-        <Text style={styles.tagline}>Know who's on your ballot. In 60 seconds.</Text>
-      </View>
 
-      <View style={styles.searchCard}>
-        <Text style={styles.searchTitle}>Find Your Candidates</Text>
-        <Text style={styles.searchSubtitle}>
-          Enter your address to see every candidate running in your specific elections.
-        </Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="Your full address"
-          placeholderTextColor={Colors.textSecondary}
-          value={address}
-          onChangeText={setAddress}
-          returnKeyType="search"
-          onSubmitEditing={findCandidates}
-        />
-
-        <TouchableOpacity style={styles.locationButton} onPress={useMyLocation} disabled={locating}>
-          <Text style={styles.locationButtonText}>
-            {locating ? 'Locating...' : 'Use My Location'}
+      <ScrollView
+        ref={scrollRef}
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ── Hero ── */}
+        <View style={styles.hero}>
+          <Text style={styles.heroTagline}>Know who's on your ballot.</Text>
+          <Text style={styles.heroSub}>
+            Watch 60-second videos from every candidate running in your local elections.
+            Free. Nonpartisan. No account needed.
           </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.testAddressButton}
-          onPress={() => setAddress('900 N Oyster Bay Rd, Bethpage, NY 11714')}
-        >
-          <Text style={styles.testAddressText}>Use test address</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.searchButton} onPress={findCandidates}>
-          <Text style={styles.searchButtonText}>Find My Ballot</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.features}>
-        <View style={styles.featureItem}>
-          <Text style={styles.featureIcon}>🗳️</Text>
-          <Text style={styles.featureText}>Every race on your specific ballot</Text>
         </View>
-        <View style={styles.featureItem}>
-          <Text style={styles.featureIcon}>🎥</Text>
-          <Text style={styles.featureText}>60-second videos from candidates</Text>
-        </View>
-        <View style={styles.featureItem}>
-          <Text style={styles.featureIcon}>🔒</Text>
-          <Text style={styles.featureText}>Free, nonpartisan, no account needed</Text>
-        </View>
-      </View>
 
-      {/* Divider */}
-      <View style={styles.divider} />
+        {/* ── Two-card fork ── */}
+        <View style={[styles.cardRow, isWide && styles.cardRowWide]}>
 
-      {/* Candidate dual CTA */}
-      <View style={styles.candidateCard}>
-        <View style={styles.candidateCardAccent} />
-        <View style={styles.candidateCardBody}>
-          <Text style={styles.candidateCardHeading}>Are you a candidate?</Text>
-          <Text style={styles.candidateCardBody2}>
-            Record your 60-second pitch and connect with voters in your district.
+          {/* Voter card */}
+          <View style={[styles.card, isWide ? styles.cardHalf : styles.cardFull, styles.cardVoter]}>
+            <View style={styles.cardIconWrap}>
+              <Ionicons name="checkbox-outline" size={34} color={NAVY} />
+            </View>
+            <Text style={[styles.cardHeading, { color: NAVY }]}>I'm a Voter</Text>
+            <Text style={styles.cardBody}>
+              Find every candidate on your specific ballot and watch their 60-second pitch.
+            </Text>
+            <TouchableOpacity
+              style={[styles.cardBtn, { backgroundColor: NAVY }]}
+              onPress={scrollToAddress}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.cardBtnText}>Find My Candidates</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Candidate card */}
+          <View style={[styles.card, isWide ? styles.cardHalf : styles.cardFull, styles.cardCandidate]}>
+            <View style={[styles.cardIconWrap, styles.cardIconWrapRed]}>
+              <Ionicons name="mic-outline" size={34} color={RED} />
+            </View>
+            <Text style={[styles.cardHeading, { color: RED }]}>I'm a Candidate</Text>
+            <Text style={styles.cardBody}>
+              Record your 60-second pitch and connect directly with voters in your district.
+            </Text>
+            <TouchableOpacity
+              style={[styles.cardBtn, { backgroundColor: RED }]}
+              onPress={() => router.push('/(candidate)/login')}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.cardBtnText}>Get Started</Text>
+            </TouchableOpacity>
+          </View>
+
+        </View>
+
+        {/* ── Address entry ── */}
+        <View style={styles.addressSection}>
+          <Text style={styles.addressTitle}>Find Your Ballot</Text>
+          <Text style={styles.addressSub}>
+            Enter your full address to see every candidate running in your specific elections.
           </Text>
+
+          <TextInput
+            ref={addressInputRef}
+            style={styles.input}
+            placeholder="123 Main St, City, State 12345"
+            placeholderTextColor={GRAY}
+            value={address}
+            onChangeText={setAddress}
+            returnKeyType="search"
+            onSubmitEditing={findCandidates}
+          />
+
+          <TouchableOpacity style={styles.locationBtn} onPress={useMyLocation} disabled={locating}>
+            <Ionicons name="location-outline" size={16} color={NAVY} />
+            <Text style={styles.locationBtnText}>
+              {locating ? 'Locating…' : 'Use My Location'}
+            </Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
-            style={styles.candidateCTAButton}
-            onPress={() => router.push('/(candidate)/login')}
+            style={styles.testBtn}
+            onPress={() => setAddress('900 N Oyster Bay Rd, Bethpage, NY 11714')}
           >
-            <Text style={styles.candidateCTAButtonText}>Get Started as a Candidate</Text>
+            <Text style={styles.testBtnText}>Use test address</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.findBtn} onPress={findCandidates} activeOpacity={0.85}>
+            <Text style={styles.findBtnText}>Find My Ballot</Text>
           </TouchableOpacity>
         </View>
-      </View>
-    </ScrollView>
+
+        {/* ── Trust signals ── */}
+        <View style={styles.trustRow}>
+          {[
+            'Every race on your specific ballot',
+            '60-second videos from candidates',
+            'Free, nonpartisan, no account needed',
+          ].map((item) => (
+            <View key={item} style={styles.trustItem}>
+              <Ionicons name="checkmark-circle" size={18} color={NAVY} />
+              <Text style={styles.trustText}>{item}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* ── Footer ── */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>
+            © 2025 1 Minute Candidate · #EarnTheVote · #KnowYourVote
+          </Text>
+        </View>
+
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  outerContainer: {
+  root: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#fff',
   },
-  container: {
+  scroll: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
-  content: {
-    padding: 24,
-    paddingBottom: 40,
+  scrollContent: {
+    paddingBottom: 0,
   },
+
+  // ── Hero ──────────────────────────────────────────
   hero: {
-    paddingTop: 40,
-    paddingBottom: 32,
+    backgroundColor: '#fff',
+    paddingHorizontal: 24,
+    paddingTop: 48,
+    paddingBottom: 36,
     alignItems: 'center',
   },
-  logo: {
+  heroTagline: {
     fontSize: 32,
-    fontWeight: 'bold',
-    color: Colors.primary,
+    fontFamily: fonts.bold,
+    color: NAVY,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 14,
+    lineHeight: 40,
   },
-  tagline: {
+  heroSub: {
     fontSize: 16,
-    color: Colors.textSecondary,
+    color: GRAY,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 26,
+    maxWidth: 480,
   },
-  searchCard: {
-    backgroundColor: Colors.card,
+
+  // ── Two-card row ──────────────────────────────────
+  cardRow: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 14,
+  },
+  cardRowWide: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+  },
+  card: {
     borderRadius: 16,
     padding: 24,
-    marginBottom: 24,
+    borderWidth: 1.5,
   },
-  searchTitle: {
+  cardFull: {
+    marginBottom: 14,
+  },
+  cardHalf: {
+    flex: 1,
+  },
+  cardVoter: {
+    backgroundColor: '#fff',
+    borderColor: NAVY,
+  },
+  cardCandidate: {
+    backgroundColor: '#FFF5F6',
+    borderColor: RED,
+  },
+  cardIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#EEF1FA',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  cardIconWrapRed: {
+    backgroundColor: '#FDEAEC',
+  },
+  cardHeading: {
     fontSize: 20,
-    fontWeight: '700',
-    color: Colors.text,
+    fontFamily: fonts.bold,
     marginBottom: 8,
   },
-  searchSubtitle: {
-    fontSize: 14,
-    color: Colors.textSecondary,
+  cardBody: {
+    fontSize: 15,
+    color: GRAY,
+    lineHeight: 23,
     marginBottom: 20,
-    lineHeight: 20,
+    flex: 1,
+  },
+  cardBtn: {
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  cardBtnText: {
+    color: '#fff',
+    fontSize: 15,
+    fontFamily: fonts.bold,
+  },
+
+  // ── Address section ───────────────────────────────
+  addressSection: {
+    backgroundColor: LIGHT_BG,
+    margin: 16,
+    borderRadius: 16,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: BORDER,
+  },
+  addressTitle: {
+    fontSize: 20,
+    fontFamily: fonts.bold,
+    color: NAVY,
+    marginBottom: 6,
+  },
+  addressSub: {
+    fontSize: 14,
+    color: GRAY,
+    lineHeight: 21,
+    marginBottom: 18,
   },
   input: {
-    backgroundColor: Colors.background,
-    borderRadius: 8,
+    backgroundColor: '#fff',
+    borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: Colors.text,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    color: '#111827',
+    borderWidth: 1.5,
+    borderColor: BORDER,
+    marginBottom: 10,
   },
-  locationButton: {
-    paddingVertical: 10,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  locationButtonText: {
-    color: Colors.primary,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  searchButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  searchButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  features: {
-    gap: 12,
-    marginBottom: 32,
-  },
-  featureItem: {
+  locationBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    marginBottom: 6,
   },
-  featureIcon: {
-    fontSize: 24,
+  locationBtnText: {
+    color: NAVY,
+    fontSize: 14,
+    fontFamily: fonts.semiBold,
   },
-  featureText: {
-    fontSize: 15,
-    color: Colors.text,
-    flex: 1,
-  },
-  testAddressButton: {
+  testBtn: {
     alignItems: 'center',
     paddingVertical: 6,
-    marginBottom: 12,
+    marginBottom: 14,
   },
-  testAddressText: {
-    color: Colors.textSecondary,
+  testBtnText: {
+    color: GRAY,
     fontSize: 13,
     textDecorationLine: 'underline',
   },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.border,
-    marginBottom: 24,
-  },
-  candidateCard: {
-    flexDirection: 'row',
-    backgroundColor: Colors.card,
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
-  },
-  candidateCardAccent: {
-    width: 5,
-    backgroundColor: '#0F1F5C',
-  },
-  candidateCardBody: {
-    flex: 1,
-    padding: 20,
-  },
-  candidateCardHeading: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0F1F5C',
-    marginBottom: 6,
-  },
-  candidateCardBody2: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  candidateCTAButton: {
-    backgroundColor: '#E8192F',
-    borderRadius: 8,
-    paddingVertical: 13,
+  findBtn: {
+    backgroundColor: NAVY,
+    borderRadius: 10,
+    paddingVertical: 15,
     alignItems: 'center',
   },
-  candidateCTAButtonText: {
+  findBtnText: {
     color: '#fff',
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 16,
+    fontFamily: fonts.bold,
+  },
+
+  // ── Trust signals ─────────────────────────────────
+  trustRow: {
+    paddingHorizontal: 24,
+    paddingVertical: 24,
+    gap: 12,
+  },
+  trustItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  trustText: {
+    fontSize: 14,
+    color: '#374151',
+    fontFamily: fonts.semiBold,
+    flex: 1,
+  },
+
+  // ── Footer ────────────────────────────────────────
+  footer: {
+    backgroundColor: NAVY,
+    paddingVertical: 20,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+  },
+  footerText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

@@ -23,15 +23,15 @@ export default function CandidateLayout() {
   }
 
   return (
-    <Stack>
-      <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen name="register" options={{ title: 'Register', headerShown: false }} />
-      <Stack.Screen name="login" options={{ title: 'Login', headerShown: false }} />
-      <Stack.Screen name="record" options={{ title: 'Record Video', headerShown: false }} />
-      <Stack.Screen name="profile" options={{ headerShown: false }} />
-      <Stack.Screen name="subscribe" options={{ headerShown: false }} />
-      <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
-      <Stack.Screen name="reset-password" options={{ headerShown: false }} />
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="register" />
+      <Stack.Screen name="login" />
+      <Stack.Screen name="record" />
+      <Stack.Screen name="profile" />
+      <Stack.Screen name="subscribe" />
+      <Stack.Screen name="forgot-password" />
+      <Stack.Screen name="reset-password" />
     </Stack>
   );
 }
