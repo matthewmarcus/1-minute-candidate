@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert, ScrollView, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert, ActivityIndicator, Platform } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { Header } from '@/components/Header';
+import { PageContainer } from '@/components/PageContainer';
 import { Colors } from '@/constants/Colors';
 import type { Video } from '@/lib/types';
 
@@ -254,14 +255,14 @@ export default function ReviewVideoScreen() {
   return (
     <View style={styles.outerContainer}>
       <Header showBack onBack={() => router.replace('/admin')} />
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {storageVideoUrl ? (
-        <StorageVideoPlayer url={storageVideoUrl} />
-      ) : video.youtube_url ? (
-        <VideoPlayer youtubeUrl={video.youtube_url} />
-      ) : null}
+      <PageContainer style={{ paddingHorizontal: 0 }}>
+        {storageVideoUrl ? (
+          <StorageVideoPlayer url={storageVideoUrl} />
+        ) : video.youtube_url ? (
+          <VideoPlayer youtubeUrl={video.youtube_url} />
+        ) : null}
 
-      <View style={styles.info}>
+        <View style={styles.info}>
         <Text style={styles.candidateName}>{video.candidates?.name}</Text>
         <Text style={styles.officeText}>{video.candidates?.office_sought}</Text>
         <Text style={styles.emailText}>{video.candidates?.email}</Text>
@@ -343,7 +344,7 @@ export default function ReviewVideoScreen() {
           )}
         </View>
       )}
-    </ScrollView>
+      </PageContainer>
     </View>
   );
 }
@@ -352,13 +353,6 @@ const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
     backgroundColor: Colors.background,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  content: {
-    paddingBottom: 40,
   },
   centered: {
     flex: 1,

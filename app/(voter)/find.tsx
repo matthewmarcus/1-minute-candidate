@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  ScrollView,
   Platform,
   KeyboardAvoidingView,
 } from 'react-native';
@@ -14,6 +13,7 @@ import { router } from 'expo-router';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { Header } from '@/components/Header';
+import { PageContainer } from '@/components/PageContainer';
 import { fonts } from '@/constants/fonts';
 
 const NAVY = '#0F1F5C';
@@ -65,13 +65,7 @@ export default function FindScreen() {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.inner}>
+        <PageContainer style={{ paddingTop: 40 }}>
             <Text style={styles.title}>Find Your Candidates</Text>
             <Text style={styles.subtitle}>
               Enter your address below and we'll show you every candidate running in your
@@ -131,8 +125,7 @@ export default function FindScreen() {
             >
               <Text style={styles.findBtnText}>Find My Ballot</Text>
             </TouchableOpacity>
-          </View>
-        </ScrollView>
+        </PageContainer>
       </KeyboardAvoidingView>
     </View>
   );
@@ -145,18 +138,6 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingBottom: 40,
-  },
-  inner: {
-    paddingHorizontal: 24,
-    paddingTop: 40,
   },
   title: {
     fontSize: 22,

@@ -55,9 +55,11 @@ export default function AdminDashboard() {
   return (
     <View style={styles.container}>
       <Header rightContent={<SignOutButton />} />
-      <View style={styles.header}>
-        <Text style={styles.title}>Review Queue</Text>
-        <Text style={styles.count}>{pendingVideos.length} pending</Text>
+      <View style={styles.contentWrapper}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Review Queue</Text>
+          <Text style={styles.count}>{pendingVideos.length} pending</Text>
+        </View>
       </View>
 
       {pendingVideos.length === 0 ? (
@@ -87,6 +89,7 @@ export default function AdminDashboard() {
             </TouchableOpacity>
           )}
           contentContainerStyle={styles.list}
+          style={styles.flatList}
         />
       )}
     </View>
@@ -102,6 +105,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  contentWrapper: {
+    maxWidth: 680,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  flatList: {
+    maxWidth: 680,
+    width: '100%',
+    alignSelf: 'center',
   },
   centered: {
     flex: 1,

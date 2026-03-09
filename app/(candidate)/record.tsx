@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, Platform } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
 import { Video, ResizeMode } from 'expo-av';
 import { router } from 'expo-router';
@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Colors } from '@/constants/Colors';
 import { Header } from '@/components/Header';
 import { CandidateNav } from '@/components/CandidateNav';
+import { PageContainer } from '@/components/PageContainer';
 import { MAX_RECORDING_SECONDS } from '@/constants/Config';
 
 type RecordingState = 'tips' | 'idle' | 'recording' | 'preview';
@@ -55,7 +56,7 @@ export default function RecordScreen() {
       <View style={styles.webContainer}>
         <Header />
         <CandidateNav activeTab="record" />
-        <View style={styles.centered}>
+        <PageContainer scrollable={false} style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <Text style={styles.webUnsupportedTitle}>Mobile Only</Text>
           <Text style={styles.webUnsupportedText}>
             Video recording is only available on the mobile app. Download the app to record and submit your candidate video.
@@ -63,7 +64,7 @@ export default function RecordScreen() {
           <TouchableOpacity style={styles.button} onPress={() => router.replace('/(candidate)')}>
             <Text style={styles.buttonText}>Go Back</Text>
           </TouchableOpacity>
-        </View>
+        </PageContainer>
       </View>
     );
   }
@@ -230,7 +231,7 @@ export default function RecordScreen() {
       <View style={styles.tipsScreen}>
         <Header />
         <CandidateNav activeTab="record" />
-        <ScrollView contentContainerStyle={styles.tipsScrollContent} showsVerticalScrollIndicator={false}>
+        <PageContainer style={{ paddingTop: 24 }}>
           <Text style={styles.tipsScreenTitle}>Before You Record</Text>
 
           {/* Landscape orientation graphic */}
@@ -260,7 +261,7 @@ export default function RecordScreen() {
           <TouchableOpacity style={styles.cancelButtonOutline} onPress={() => router.replace('/(candidate)')}>
             <Text style={styles.cancelButtonOutlineText}>Cancel</Text>
           </TouchableOpacity>
-        </ScrollView>
+        </PageContainer>
       </View>
     );
   }
@@ -442,10 +443,6 @@ const styles = StyleSheet.create({
   tipsScreen: {
     flex: 1,
     backgroundColor: Colors.background,
-  },
-  tipsScrollContent: {
-    padding: 24,
-    paddingBottom: 40,
   },
   tipsScreenTitle: {
     fontSize: 28,
