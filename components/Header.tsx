@@ -94,8 +94,7 @@ export function Header({
 
   return (
     <>
-      <View style={styles.container}>
-        <SafeAreaView edges={['top']}>
+      <SafeAreaView style={styles.container} edges={['top']}>
           <View style={styles.inner}>
             {/* LEFT: back arrow (if showBack) + logo + title */}
             <View style={styles.left}>
@@ -130,8 +129,7 @@ export function Header({
               </View>
             )}
           </View>
-        </SafeAreaView>
-      </View>
+      </SafeAreaView>
 
       {/* Mobile hamburger menu — voter variant only */}
       {variant === 'voter' && (
