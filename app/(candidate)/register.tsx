@@ -125,6 +125,18 @@ export default function CandidateRegister() {
       return;
     }
 
+    // Fire-and-forget: send welcome email to new candidate
+    try {
+      supabase.functions.invoke('welcome-email', {
+        body: {
+          candidate_email: form.email,
+          candidate_name: form.name,
+          office_sought: form.officeSought,
+          race_level: form.raceLevel,
+        },
+      });
+    } catch (_) {}
+
     setLoading(false);
     Alert.alert(
       'Account Created',
