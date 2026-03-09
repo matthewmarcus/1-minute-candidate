@@ -19,7 +19,6 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { Colors } from '@/constants/Colors';
 import { Header } from '@/components/Header';
-import { CandidateNav } from '@/components/CandidateNav';
 import type { Candidate } from '@/lib/types';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -359,7 +358,6 @@ export default function CandidateProfile() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <Header />
-      <CandidateNav activeTab="profile" />
 
       {toast && <Toast message={toast.message} type={toast.type} />}
 
