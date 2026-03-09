@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Linking,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -194,6 +195,8 @@ function IssueVideosSection({
 }) {
   const slots = countSlots(purchases, videos, 'issue');
   const [expandedVideoId, setExpandedVideoId] = useState<string | null>(null);
+  const { width: windowWidth } = useWindowDimensions();
+  const cardWidth = Math.min(windowWidth, 680) - 40;
 
   return (
     <View style={styles.subsection}>
@@ -235,7 +238,7 @@ function IssueVideosSection({
                 </View>
               </TouchableOpacity>
               {expandedVideoId === v.id && v.youtube_video_id && v.youtube_url && (
-                <View style={{ marginTop: 10 }}>
+                <View style={{ width: cardWidth - 26, height: (cardWidth - 26) * (9 / 16), overflow: 'hidden', borderRadius: 8, marginTop: 12, alignSelf: 'center' }}>
                   <VideoPlayer youtubeUrl={v.youtube_url} />
                 </View>
               )}
@@ -265,6 +268,8 @@ function EndorsementVideosSection({
 }) {
   const slots = countSlots(purchases, videos, 'endorsement');
   const [expandedVideoId, setExpandedVideoId] = useState<string | null>(null);
+  const { width: windowWidth } = useWindowDimensions();
+  const cardWidth = Math.min(windowWidth, 680) - 40;
 
   return (
     <View style={styles.subsection}>
@@ -306,7 +311,7 @@ function EndorsementVideosSection({
                 </View>
               </TouchableOpacity>
               {expandedVideoId === v.id && v.youtube_video_id && v.youtube_url && (
-                <View style={{ marginTop: 10 }}>
+                <View style={{ width: cardWidth - 26, height: (cardWidth - 26) * (9 / 16), overflow: 'hidden', borderRadius: 8, marginTop: 12, alignSelf: 'center' }}>
                   <VideoPlayer youtubeUrl={v.youtube_url} />
                 </View>
               )}
@@ -782,6 +787,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderWidth: 1,
     borderColor: Colors.border,
+    overflow: 'hidden',
   },
   videoListCardHeader: {
     flexDirection: 'row',
