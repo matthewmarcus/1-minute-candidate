@@ -1,4 +1,4 @@
-import { View, StyleSheet, Dimensions, Platform } from 'react-native';
+import { View, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 
 interface VideoPlayerProps {
   youtubeUrl: string;
@@ -15,10 +15,11 @@ function extractYouTubeId(url: string): string | null {
   return null;
 }
 
-const { width } = Dimensions.get('window');
-const PLAYER_HEIGHT = (width * 9) / 16;
-
 export function VideoPlayer({ youtubeUrl }: VideoPlayerProps) {
+  const { width } = useWindowDimensions();
+  const videoWidth = Math.min(width, 680) - 40;
+  const videoHeight = videoWidth * (9 / 16);
+
   const videoId = extractYouTubeId(youtubeUrl);
   if (!videoId) return null;
 
@@ -26,7 +27,7 @@ export function VideoPlayer({ youtubeUrl }: VideoPlayerProps) {
 
   if (Platform.OS === 'web') {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { width: videoWidth, height: videoHeight }]}>
         <iframe
           src={embedUrl}
           style={{ width: '100%', height: '100%', border: 'none' }}
@@ -41,9 +42,9 @@ export function VideoPlayer({ youtubeUrl }: VideoPlayerProps) {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { WebView } = require('react-native-webview');
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { width: videoWidth, height: videoHeight }]}>
       <WebView
-        style={styles.player}
+        style={{ width: videoWidth, height: videoHeight }}
         source={{ uri: embedUrl }}
         allowsFullscreenVideo
         mediaPlaybackRequiresUserAction={false}
@@ -55,11 +56,6 @@ export function VideoPlayer({ youtubeUrl }: VideoPlayerProps) {
 
 const styles = StyleSheet.create({
   container: {
-    width: '100%',
-    height: PLAYER_HEIGHT,
     backgroundColor: '#000',
-  },
-  player: {
-    flex: 1,
   },
 });

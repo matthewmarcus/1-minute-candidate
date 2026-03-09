@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
 
   // ── Hero ──────────────────────────────────────────
   hero: {
-    backgroundColor: '#fff',
+    backgroundColor: '#F8F9FA',
     paddingHorizontal: 24,
     paddingTop: 48,
     paddingBottom: 36,

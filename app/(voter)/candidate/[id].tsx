@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Linking, Platform, Image } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Linking, Platform, Image, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,9 +10,6 @@ import { Header } from '@/components/Header';
 import { PageContainer } from '@/components/PageContainer';
 import { Colors } from '@/constants/Colors';
 import type { Candidate, Video } from '@/lib/types';
-
-const { width } = require('react-native').Dimensions.get('window');
-const THUMBNAIL_HEIGHT = (width * 9) / 16;
 
 const BASE_URL = 'https://1minutecandidate.com';
 
@@ -55,6 +52,10 @@ function ProfilePhoto({ photoUrl, name }: { photoUrl: string | null; name: strin
 }
 
 function UnlistedVideoThumbnail({ videoId, youtubeUrl }: { videoId: string; youtubeUrl: string }) {
+  const { width } = useWindowDimensions();
+  const thumbWidth = Math.min(width, 680) - 40;
+  const thumbHeight = thumbWidth * (9 / 16);
+
   if (Platform.OS === 'web') {
     return (
       // @ts-ignore — anchor is a valid web element
@@ -62,7 +63,7 @@ function UnlistedVideoThumbnail({ videoId, youtubeUrl }: { videoId: string; yout
         href={youtubeUrl}
         target="_blank"
         rel="noopener noreferrer"
-        style={{ display: 'block', position: 'relative', width: '100%', height: THUMBNAIL_HEIGHT, backgroundColor: '#000', textDecoration: 'none' }}
+        style={{ display: 'block', position: 'relative', width: thumbWidth, height: thumbHeight, backgroundColor: '#000', textDecoration: 'none' }}
       >
         {/* @ts-ignore */}
         <img
@@ -86,11 +87,11 @@ function UnlistedVideoThumbnail({ videoId, youtubeUrl }: { videoId: string; yout
     <TouchableOpacity
       activeOpacity={0.85}
       onPress={() => Linking.openURL(youtubeUrl)}
-      style={styles.thumbnailContainer}
+      style={[styles.thumbnailContainer, { width: thumbWidth, height: thumbHeight }]}
     >
       <Image
         source={{ uri: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` }}
-        style={styles.thumbnailImage}
+        style={[styles.thumbnailImage, { width: thumbWidth, height: thumbHeight }]}
         resizeMode="cover"
       />
       <View style={styles.playOverlay}>
@@ -460,14 +461,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   thumbnailContainer: {
-    width: '100%',
-    height: THUMBNAIL_HEIGHT,
     backgroundColor: '#000',
   },
-  thumbnailImage: {
-    width: '100%',
-    height: '100%',
-  },
+  thumbnailImage: {},
   playOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
