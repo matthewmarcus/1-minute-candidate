@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +7,8 @@ import {
   ScrollView,
   useWindowDimensions,
   Linking,
+  Modal,
+  Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,10 +24,76 @@ const MUTED = '#9CA3AF';
 export default function VoterHome() {
   const { width } = useWindowDimensions();
   const isWide = width >= 600;
+  const showInlineNav = width >= 768;
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // Nav links rendered inline (wide) or via hamburger (narrow)
+  const headerRight = showInlineNav ? (
+    <View style={styles.navLinks}>
+      <TouchableOpacity onPress={() => {}}>
+        <Text style={styles.navLink}>For Voters</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => router.push('/(candidate)/login')}>
+        <Text style={styles.navLink}>For Candidates</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => router.push('/(candidate)/login')}>
+        <Text style={styles.navLink}>Sign In</Text>
+      </TouchableOpacity>
+    </View>
+  ) : (
+    <TouchableOpacity
+      onPress={() => setMenuOpen(true)}
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+    >
+      <Ionicons name="menu-outline" size={28} color="#fff" />
+    </TouchableOpacity>
+  );
 
   return (
     <View style={styles.root}>
-      <Header />
+      <Header rightContent={headerRight} rightExpand={showInlineNav} />
+
+      {/* Mobile hamburger menu */}
+      <Modal
+        visible={menuOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMenuOpen(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setMenuOpen(false)}
+        >
+          <View style={styles.mobileMenu}>
+            <TouchableOpacity
+              style={styles.mobileMenuClose}
+              onPress={() => setMenuOpen(false)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="close-outline" size={28} color={NAVY} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.mobileMenuItem}
+              onPress={() => setMenuOpen(false)}
+            >
+              <Text style={styles.mobileMenuLink}>For Voters</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.mobileMenuItem}
+              onPress={() => { setMenuOpen(false); router.push('/(candidate)/login'); }}
+            >
+              <Text style={styles.mobileMenuLink}>For Candidates</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.mobileMenuItem}
+              onPress={() => { setMenuOpen(false); router.push('/(candidate)/login'); }}
+            >
+              <Text style={styles.mobileMenuLink}>Sign In</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       <ScrollView
         style={styles.scroll}
@@ -141,6 +210,54 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 0,
+  },
+
+  // ── Header nav ────────────────────────────────────
+  navLinks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  navLink: {
+    color: '#fff',
+    fontSize: 14,
+    fontFamily: fonts.semiBold,
+    marginLeft: 20,
+  },
+
+  // ── Mobile hamburger menu ─────────────────────────
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+  },
+  mobileMenu: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 220,
+    backgroundColor: '#fff',
+    paddingTop: 16,
+    paddingBottom: 24,
+    paddingHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: -2, height: 0 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 8,
+    minHeight: '100%',
+  },
+  mobileMenuClose: {
+    alignSelf: 'flex-end',
+    marginBottom: 16,
+  },
+  mobileMenuItem: {
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  mobileMenuLink: {
+    color: NAVY,
+    fontSize: 16,
+    fontFamily: fonts.semiBold,
   },
 
   // ── Hero ──────────────────────────────────────────

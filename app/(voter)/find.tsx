@@ -74,8 +74,24 @@ export default function FindScreen() {
           <View style={styles.inner}>
             <Text style={styles.title}>Find Your Candidates</Text>
             <Text style={styles.subtitle}>
-              Enter your address to see every candidate running in your elections.
+              Enter your address below and we'll show you every candidate running in your
+              specific local, state, and federal elections — along with their 60-second video
+              pitches. Free, nonpartisan, and no account needed.
             </Text>
+
+            {/* Trust signals */}
+            <View style={styles.trustRow}>
+              {[
+                'Every race on your specific ballot',
+                '60-second videos from real candidates',
+                'Free · Nonpartisan · No account needed',
+              ].map((item) => (
+                <View key={item} style={styles.trustItem}>
+                  <Ionicons name="checkmark-circle" size={14} color={NAVY} />
+                  <Text style={styles.trustText}>{item}</Text>
+                </View>
+              ))}
+            </View>
 
             <TextInput
               ref={addressInputRef}
@@ -143,7 +159,7 @@ const styles = StyleSheet.create({
     paddingTop: 40,
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontFamily: fonts.bold,
     color: NAVY,
     marginBottom: 10,
@@ -151,8 +167,21 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 15,
     color: GRAY,
-    lineHeight: 23,
-    marginBottom: 28,
+    lineHeight: 22,
+    marginBottom: 16,
+  },
+  trustRow: {
+    gap: 8,
+    marginBottom: 24,
+  },
+  trustItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  trustText: {
+    fontSize: 13,
+    color: '#9CA3AF',
   },
   input: {
     backgroundColor: '#fff',
