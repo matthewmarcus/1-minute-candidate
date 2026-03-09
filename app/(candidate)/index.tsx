@@ -246,12 +246,30 @@ function ProfileCompletenessCard({ profile, hasVideo }: { profile: Partial<Candi
   );
 }
 
+const stepperButtonStyle = {
+  width: 32,
+  height: 32,
+  borderRadius: 16,
+  borderWidth: 1,
+  borderColor: '#0F1F5C',
+  alignItems: 'center' as const,
+  justifyContent: 'center' as const,
+};
+const stepperTextStyle = {
+  fontSize: 18,
+  color: '#0F1F5C',
+  fontFamily: 'Quicksand_700Bold',
+  lineHeight: 20,
+};
+
 export default function CandidateDashboard() {
   const { session, signOut } = useAuth();
   const [profile, setProfile] = useState<Partial<Candidate> | null>(null);
   const [video, setVideo] = useState<Video | null | undefined>(undefined); // undefined = loading
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
+  const [issueQty, setIssueQty] = useState(1);
+  const [endorsementQty, setEndorsementQty] = useState(1);
 
   useEffect(() => {
     if (!session?.user) return;
@@ -280,7 +298,7 @@ export default function CandidateDashboard() {
     load();
   }, [session]);
 
-  async function handlePurchase(product_type: string) {
+  async function handlePurchase(product_type: string, quantity: number = 1) {
     setPurchasing(true);
     try {
       const appUrl =
@@ -291,6 +309,7 @@ export default function CandidateDashboard() {
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: {
           product_type,
+          quantity,
           success_url: `${appUrl}/(candidate)/payment-success`,
           cancel_url: `${appUrl}/(candidate)/subscribe`,
         },
@@ -369,14 +388,36 @@ export default function CandidateDashboard() {
                 <Text style={styles.addVideoDescription}>
                   Record a 60-second video on a policy issue.
                 </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                  <TouchableOpacity
+                    onPress={() => setIssueQty(q => Math.max(1, q - 1))}
+                    style={stepperButtonStyle}>
+                    <Text style={stepperTextStyle}>−</Text>
+                  </TouchableOpacity>
+                  <Text style={{ fontSize: 16, fontFamily: 'Quicksand_700Bold', minWidth: 24, textAlign: 'center' }}>
+                    {issueQty}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setIssueQty(q => Math.min(10, q + 1))}
+                    style={stepperButtonStyle}>
+                    <Text style={stepperTextStyle}>+</Text>
+                  </TouchableOpacity>
+                  <Text style={{ color: '#6B7280', fontSize: 13 }}>
+                    {issueQty > 1 ? `${issueQty} videos` : '1 video'}
+                  </Text>
+                </View>
                 <TouchableOpacity
                   style={[styles.addVideoButton, purchasing && styles.buttonDisabled]}
-                  onPress={() => handlePurchase('issue_video')}
+                  onPress={() => handlePurchase('issue_video', issueQty)}
                   disabled={purchasing}
                   activeOpacity={0.8}
                 >
                   <Text style={styles.addVideoButtonText}>
-                    {purchasing ? 'Loading...' : `Add — $${videoPrice}`}
+                    {purchasing
+                      ? 'Loading...'
+                      : issueQty === 1
+                      ? `Add Issue Video — $${videoPrice}`
+                      : `Add ${issueQty} Issue Videos — $${videoPrice * issueQty}`}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -388,14 +429,36 @@ export default function CandidateDashboard() {
                 <Text style={styles.addVideoDescription}>
                   Upload a video endorsement from a supporter.
                 </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                  <TouchableOpacity
+                    onPress={() => setEndorsementQty(q => Math.max(1, q - 1))}
+                    style={stepperButtonStyle}>
+                    <Text style={stepperTextStyle}>−</Text>
+                  </TouchableOpacity>
+                  <Text style={{ fontSize: 16, fontFamily: 'Quicksand_700Bold', minWidth: 24, textAlign: 'center' }}>
+                    {endorsementQty}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setEndorsementQty(q => Math.min(10, q + 1))}
+                    style={stepperButtonStyle}>
+                    <Text style={stepperTextStyle}>+</Text>
+                  </TouchableOpacity>
+                  <Text style={{ color: '#6B7280', fontSize: 13 }}>
+                    {endorsementQty > 1 ? `${endorsementQty} videos` : '1 video'}
+                  </Text>
+                </View>
                 <TouchableOpacity
                   style={[styles.addVideoButton, purchasing && styles.buttonDisabled]}
-                  onPress={() => handlePurchase('endorsement_video')}
+                  onPress={() => handlePurchase('endorsement_video', endorsementQty)}
                   disabled={purchasing}
                   activeOpacity={0.8}
                 >
                   <Text style={styles.addVideoButtonText}>
-                    {purchasing ? 'Loading...' : `Add — $${videoPrice}`}
+                    {purchasing
+                      ? 'Loading...'
+                      : endorsementQty === 1
+                      ? `Add Endorsement Video — $${videoPrice}`
+                      : `Add ${endorsementQty} Endorsement Videos — $${videoPrice * endorsementQty}`}
                   </Text>
                 </TouchableOpacity>
               </View>
