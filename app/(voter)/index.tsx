@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  ScrollView,
   useWindowDimensions,
   Linking,
   Modal,
@@ -13,6 +12,7 @@ import {
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Header } from '@/components/Header';
+import { PageContainer } from '@/components/PageContainer';
 import { fonts } from '@/constants/fonts';
 
 const NAVY = '#0F1F5C';
@@ -95,11 +95,7 @@ export default function VoterHome() {
         </TouchableOpacity>
       </Modal>
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <PageContainer style={{ paddingHorizontal: 0 }}>
         {/* ── Hero ── */}
         <View style={styles.hero}>
           <Text style={styles.heroTagline}>Know who's on your ballot.</Text>
@@ -195,7 +191,7 @@ export default function VoterHome() {
           <Text style={styles.footerCopyright}>© 2025 1 Minute Candidate</Text>
         </View>
 
-      </ScrollView>
+      </PageContainer>
     </View>
   );
 }
@@ -203,13 +199,7 @@ export default function VoterHome() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 0,
+    backgroundColor: '#F8F9FA',
   },
 
   // ── Header nav ────────────────────────────────────

@@ -370,6 +370,7 @@ export default function CandidateProfile() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        <View style={styles.innerContainer}>
 
         {/* ── Section 1: About You ─────────────────────────────────────── */}
         <Text style={styles.sectionHeader}>About You</Text>
@@ -525,6 +526,7 @@ export default function CandidateProfile() {
         </TouchableOpacity>
 
         <View style={styles.bottomSpacer} />
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -575,8 +577,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
     paddingTop: 20,
+    paddingBottom: 16,
+    alignItems: 'center',
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: 680,
+    paddingHorizontal: 16,
   },
 
   // Sections

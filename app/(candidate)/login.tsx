@@ -8,7 +8,6 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +15,7 @@ import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
 import { fonts } from '@/constants/fonts';
 import { Header } from '@/components/Header';
+import { PageContainer } from '@/components/PageContainer';
 
 const NAVY = '#0F1F5C';
 const RED = '#E8192F';
@@ -48,12 +48,7 @@ export default function CandidateLogin() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <Header showBack onBack={() => router.replace('/(voter)')} />
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+      <PageContainer style={{ paddingHorizontal: 0 }}>
         {/* ── Value proposition ── */}
         <View style={styles.valueProp}>
           <Text style={styles.eyebrow}>FOR POLITICAL CANDIDATES</Text>
@@ -118,7 +113,7 @@ export default function CandidateLogin() {
             </TouchableOpacity>
           </Link>
         </View>
-      </ScrollView>
+      </PageContainer>
     </KeyboardAvoidingView>
   );
 }
@@ -128,13 +123,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-
   // ── Value proposition ────────────────────────────
   valueProp: {
     paddingHorizontal: 24,

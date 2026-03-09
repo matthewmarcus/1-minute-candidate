@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Linking, Platform, Image } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Linking, Platform, Image } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import Svg, { Path } from 'react-native-svg';
 import { supabase } from '@/lib/supabase';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { Header } from '@/components/Header';
+import { PageContainer } from '@/components/PageContainer';
 import { Colors } from '@/constants/Colors';
 import type { Candidate, Video } from '@/lib/types';
 
@@ -251,63 +252,63 @@ export default function CandidateProfileScreen() {
   return (
     <View style={styles.outerContainer}>
       <Header showBack onBack={() => router.back()} />
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {video?.youtube_url && (
-        video.youtube_privacy === 'public'
-          ? <VideoPlayer youtubeUrl={video.youtube_url} />
-          : <UnlistedVideoThumbnail videoId={video.youtube_video_id!} youtubeUrl={video.youtube_url} />
-      )}
+      <PageContainer style={{ paddingHorizontal: 0 }}>
+        {video?.youtube_url && (
+          video.youtube_privacy === 'public'
+            ? <VideoPlayer youtubeUrl={video.youtube_url} />
+            : <UnlistedVideoThumbnail videoId={video.youtube_video_id!} youtubeUrl={video.youtube_url} />
+        )}
 
-      <View style={styles.info}>
-        {/* Photo + name header */}
-        <View style={styles.header}>
-          <ProfilePhoto photoUrl={candidate.photo_url} name={candidate.name} />
-          <View style={styles.headerText}>
-            <Text style={styles.name}>{candidate.name}</Text>
-            <Text style={styles.office}>{candidate.office_sought}</Text>
-            <View style={styles.badges}>
-              {candidate.party && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{candidate.party}</Text>
-                </View>
-              )}
-              {candidate.state && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{candidate.state}</Text>
-                </View>
-              )}
+        <View style={styles.info}>
+          {/* Photo + name header */}
+          <View style={styles.header}>
+            <ProfilePhoto photoUrl={candidate.photo_url} name={candidate.name} />
+            <View style={styles.headerText}>
+              <Text style={styles.name}>{candidate.name}</Text>
+              <Text style={styles.office}>{candidate.office_sought}</Text>
+              <View style={styles.badges}>
+                {candidate.party && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{candidate.party}</Text>
+                  </View>
+                )}
+                {candidate.state && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{candidate.state}</Text>
+                  </View>
+                )}
+              </View>
             </View>
           </View>
+
+          {(candidate.city || candidate.district) && (
+            <Text style={styles.district}>
+              {[candidate.city || null, candidate.district || null]
+                .filter(Boolean)
+                .join(' · ')}
+            </Text>
+          )}
+
+          <SocialLinks candidate={candidate} />
+
+          {candidate.bio && (
+            <>
+              <Text style={styles.sectionTitle}>About</Text>
+              <Text style={styles.bio}>{candidate.bio}</Text>
+            </>
+          )}
+
+          {!video && (
+            <View style={styles.noVideo}>
+              <Text style={styles.noVideoText}>
+                This candidate hasn't submitted their 60-second video yet.
+              </Text>
+            </View>
+          )}
         </View>
 
-        {(candidate.city || candidate.district) && (
-          <Text style={styles.district}>
-            {[candidate.city || null, candidate.district || null]
-              .filter(Boolean)
-              .join(' · ')}
-          </Text>
-        )}
-
-        <SocialLinks candidate={candidate} />
-
-        {candidate.bio && (
-          <>
-            <Text style={styles.sectionTitle}>About</Text>
-            <Text style={styles.bio}>{candidate.bio}</Text>
-          </>
-        )}
-
-        {!video && (
-          <View style={styles.noVideo}>
-            <Text style={styles.noVideoText}>
-              This candidate hasn't submitted their 60-second video yet.
-            </Text>
-          </View>
-        )}
-      </View>
-
-      <ShareButtons candidate={candidate} />
-    </ScrollView>
+        <ShareButtons candidate={candidate} />
+      </PageContainer>
     </View>
   );
 }
@@ -316,13 +317,6 @@ const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
     backgroundColor: Colors.background,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  content: {
-    paddingBottom: 40,
   },
   centered: {
     flex: 1,

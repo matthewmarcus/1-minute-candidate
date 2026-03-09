@@ -175,17 +175,21 @@ export default function BallotScreen() {
   return (
     <View style={styles.container}>
       <Header showBack onBack={() => router.replace('/(voter)')} />
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Your Ballot</Text>
-        {electionName ? <Text style={styles.electionName}>{electionName}</Text> : null}
-        <Text style={styles.headerAddress} numberOfLines={2}>{address}</Text>
+      <View style={styles.contentWrapper}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Your Ballot</Text>
+          {electionName ? <Text style={styles.electionName}>{electionName}</Text> : null}
+          <Text style={styles.headerAddress} numberOfLines={2}>{address}</Text>
+        </View>
       </View>
 
       {isDemo && (
-        <View style={styles.demoBanner}>
-          <Text style={styles.demoBannerText}>
-            Demo mode — no live election data found for this address. Showing candidates from our platform so you can preview the voter experience.
-          </Text>
+        <View style={styles.contentWrapper}>
+          <View style={styles.demoBanner}>
+            <Text style={styles.demoBannerText}>
+              Demo mode — no live election data found for this address. Showing candidates from our platform so you can preview the voter experience.
+            </Text>
+          </View>
         </View>
       )}
 
@@ -204,6 +208,7 @@ export default function BallotScreen() {
           data={contests}
           keyExtractor={(_, index) => String(index)}
           contentContainerStyle={styles.list}
+          style={styles.flatList}
           renderItem={({ item }) => <ContestCard contest={item} />}
         />
       )}
@@ -261,6 +266,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  contentWrapper: {
+    maxWidth: 680,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  flatList: {
+    maxWidth: 680,
+    width: '100%',
+    alignSelf: 'center',
   },
   centered: {
     flex: 1,

@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   Image,
   Platform,
   ActivityIndicator,
@@ -16,6 +15,7 @@ import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
 import { Header } from '@/components/Header';
 import { CandidateNav } from '@/components/CandidateNav';
+import { PageContainer } from '@/components/PageContainer';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import type { Candidate, Video } from '@/lib/types';
 
@@ -268,11 +268,7 @@ export default function CandidateDashboard() {
       <Header />
       <CandidateNav activeTab="dashboard" />
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <PageContainer style={{ paddingTop: 8 }}>
         {/* Welcome section with avatar */}
         <View style={styles.welcomeSection}>
           <View style={styles.welcomeRow}>
@@ -337,7 +333,7 @@ export default function CandidateDashboard() {
         </View>
 
         <View style={styles.bottomSpacer} />
-      </ScrollView>
+      </PageContainer>
     </View>
   );
 }
@@ -352,14 +348,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: Colors.background,
-  },
-
-  // Scroll
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
   },
 
   // Welcome
