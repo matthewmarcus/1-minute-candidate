@@ -9,7 +9,7 @@ import { fonts } from '@/constants/fonts';
 export default function PaymentSuccessScreen() {
   useEffect(() => {
     const timer = setTimeout(() => {
-      router.replace('/(candidate)');
+      router.replace('/dashboard');
     }, 3000);
     return () => clearTimeout(timer);
   }, []);
@@ -32,7 +32,7 @@ export default function PaymentSuccessScreen() {
         <View style={styles.buttonWrapper}>
           <TouchableOpacity
             style={[styles.button, styles.buttonNavy]}
-            onPress={() => router.replace('/(candidate)')}
+            onPress={() => router.replace('/dashboard')}
             activeOpacity={0.8}
           >
             <Text style={styles.buttonText}>Go to Dashboard</Text>

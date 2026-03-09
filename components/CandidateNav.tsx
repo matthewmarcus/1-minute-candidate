@@ -9,7 +9,7 @@ interface CandidateNavProps {
 }
 
 const TABS: { key: TabName; label: string; href: string }[] = [
-  { key: 'dashboard', label: 'Dashboard', href: '/(candidate)/' },
+  { key: 'dashboard', label: 'Dashboard', href: '/dashboard' },
   { key: 'profile', label: 'My Profile', href: '/(candidate)/profile' },
   { key: 'record', label: 'Record Video', href: '/(candidate)/record' },
   { key: 'subscribe', label: 'Billing', href: '/(candidate)/subscribe' },

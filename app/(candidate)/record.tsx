@@ -124,7 +124,7 @@ export default function RecordScreen() {
                   Alert.alert(
                     'Video Submitted',
                     'Your endorsement video has been submitted for review.',
-                    [{ text: 'OK', onPress: () => router.replace('/(candidate)') }]
+                    [{ text: 'OK', onPress: () => router.replace('/dashboard') }]
                   );
                 }}
                 disabled={submitting}
@@ -150,7 +150,7 @@ export default function RecordScreen() {
 
           <TouchableOpacity
             style={[styles.button, styles.buttonCancel, { marginTop: 12 }]}
-            onPress={() => router.replace('/(candidate)')}
+            onPress={() => router.replace('/dashboard')}
           >
             <Text style={styles.buttonCancelText}>Cancel</Text>
           </TouchableOpacity>
@@ -170,7 +170,7 @@ export default function RecordScreen() {
           <Text style={styles.webUnsupportedText}>
             Video recording is only available on the mobile app. Download the app to record and submit your candidate video.
           </Text>
-          <TouchableOpacity style={styles.button} onPress={() => router.replace('/(candidate)')}>
+          <TouchableOpacity style={styles.button} onPress={() => router.replace('/dashboard')}>
             <Text style={styles.buttonText}>Go Back</Text>
           </TouchableOpacity>
         </View>
@@ -205,7 +205,7 @@ export default function RecordScreen() {
     if (recordingState === 'recording') {
       cameraRef.current?.stopRecording();
     }
-    router.replace('/(candidate)');
+    router.replace('/dashboard');
   }, [recordingState]);
 
   const startRecording = useCallback(async () => {
@@ -338,7 +338,7 @@ export default function RecordScreen() {
     Alert.alert(
       'Video Submitted',
       'Your video has been submitted for review. You will be notified once it is approved.',
-      [{ text: 'OK', onPress: () => router.replace('/(candidate)') }]
+      [{ text: 'OK', onPress: () => router.replace('/dashboard') }]
     );
   }, [videoUri, session]);
 
@@ -412,7 +412,7 @@ export default function RecordScreen() {
                   Alert.alert(
                     'Video Submitted',
                     'Your endorsement video has been submitted for review.',
-                    [{ text: 'OK', onPress: () => router.replace('/(candidate)') }]
+                    [{ text: 'OK', onPress: () => router.replace('/dashboard') }]
                   );
                 }}
                 disabled={submitting}
@@ -435,7 +435,7 @@ export default function RecordScreen() {
 
           <TouchableOpacity
             style={[styles.cancelButtonOutline, { marginTop: 12 }]}
-            onPress={() => router.replace('/(candidate)')}
+            onPress={() => router.replace('/dashboard')}
             disabled={submitting}
           >
             <Text style={styles.cancelButtonOutlineText}>Cancel</Text>
@@ -478,7 +478,7 @@ export default function RecordScreen() {
             <Text style={styles.readyButtonText}>I'm Ready to Record</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.cancelButtonOutline} onPress={() => router.replace('/(candidate)')}>
+          <TouchableOpacity style={styles.cancelButtonOutline} onPress={() => router.replace('/dashboard')}>
             <Text style={styles.cancelButtonOutlineText}>Cancel</Text>
           </TouchableOpacity>
         </PageContainer>
@@ -508,7 +508,7 @@ export default function RecordScreen() {
         >
           <Text style={styles.buttonText}>Grant Permissions</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.button, styles.buttonSecondary, { marginTop: 12 }]} onPress={() => router.replace('/(candidate)')}>
+        <TouchableOpacity style={[styles.button, styles.buttonSecondary, { marginTop: 12 }]} onPress={() => router.replace('/dashboard')}>
           <Text style={styles.buttonTextSecondary}>Cancel</Text>
         </TouchableOpacity>
       </View>
