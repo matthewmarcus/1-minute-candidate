@@ -103,6 +103,14 @@ function UnlistedVideoThumbnail({ videoId, youtubeUrl }: { videoId: string; yout
   );
 }
 
+function VideoEmbed({ video }: { video: Video }) {
+  if (!video.youtube_url || !video.youtube_video_id) return null;
+  if (video.youtube_privacy === 'public') {
+    return <VideoPlayer youtubeUrl={video.youtube_url} />;
+  }
+  return <UnlistedVideoThumbnail videoId={video.youtube_video_id} youtubeUrl={video.youtube_url} />;
+}
+
 function XLogoIcon({ size = 22, color = Colors.primary }: { size?: number; color?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
@@ -211,7 +219,7 @@ function ShareButtons({ candidate }: { candidate: Candidate }) {
 export default function CandidateProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [candidate, setCandidate] = useState<Candidate | null>(null);
-  const [video, setVideo] = useState<Video | null>(null);
+  const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -221,15 +229,13 @@ export default function CandidateProfileScreen() {
       supabase.from('candidates').select('*').eq('id', id).single(),
       supabase
         .from('videos')
-        .select('*')
+        .select('id, video_type, title, status, youtube_url, youtube_video_id, youtube_privacy')
         .eq('candidate_id', id)
         .eq('status', 'approved')
-        .order('approved_at', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-    ]).then(([candidateResult, videoResult]) => {
+        .order('approved_at', { ascending: false }),
+    ]).then(([candidateResult, videosResult]) => {
       if (!candidateResult.error) setCandidate(candidateResult.data);
-      if (!videoResult.error) setVideo(videoResult.data);
+      if (!videosResult.error) setVideos(videosResult.data ?? []);
       setLoading(false);
     });
   }, [id]);
@@ -250,14 +256,19 @@ export default function CandidateProfileScreen() {
     );
   }
 
+  const overviewVideo = videos.find(v => v.video_type === 'overview') ?? null;
+  const issueVideos = videos.filter(v => v.video_type === 'issue');
+  const endorsementVideos = videos.filter(v => v.video_type === 'endorsement');
+
   return (
     <View style={styles.outerContainer}>
       <Header />
       <PageContainer style={{ paddingHorizontal: 0 }}>
-        {video?.youtube_url && (
-          video.youtube_privacy === 'public'
-            ? <VideoPlayer youtubeUrl={video.youtube_url} />
-            : <UnlistedVideoThumbnail videoId={video.youtube_video_id!} youtubeUrl={video.youtube_url} />
+        {/* Overview video — shown at top with no padding, full-width */}
+        {overviewVideo?.youtube_url && (
+          overviewVideo.youtube_privacy === 'public'
+            ? <VideoPlayer youtubeUrl={overviewVideo.youtube_url} />
+            : <UnlistedVideoThumbnail videoId={overviewVideo.youtube_video_id!} youtubeUrl={overviewVideo.youtube_url} />
         )}
 
         <View style={styles.info}>
@@ -299,7 +310,7 @@ export default function CandidateProfileScreen() {
             </>
           )}
 
-          {!video && (
+          {videos.length === 0 && (
             <View style={styles.noVideo}>
               <Text style={styles.noVideoText}>
                 This candidate hasn't submitted their 60-second video yet.
@@ -307,6 +318,38 @@ export default function CandidateProfileScreen() {
             </View>
           )}
         </View>
+
+        {/* On the Issues section */}
+        {issueVideos.length > 0 && (
+          <View style={styles.videoSection}>
+            <Text style={styles.videoSectionTitle}>On the Issues</Text>
+            {issueVideos.map((v, index) => (
+              <View key={v.id} style={styles.videoCard}>
+                {v.title ? (
+                  <Text style={styles.videoCardTitle}>{v.title}</Text>
+                ) : null}
+                <VideoEmbed video={v} />
+                {index < issueVideos.length - 1 && <View style={styles.videoDivider} />}
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Endorsements section */}
+        {endorsementVideos.length > 0 && (
+          <View style={styles.videoSection}>
+            <Text style={styles.videoSectionTitle}>Endorsements</Text>
+            {endorsementVideos.map((v, index) => (
+              <View key={v.id} style={styles.videoCard}>
+                {v.title ? (
+                  <Text style={styles.videoCardTitle}>{v.title}</Text>
+                ) : null}
+                <VideoEmbed video={v} />
+                {index < endorsementVideos.length - 1 && <View style={styles.videoDivider} />}
+              </View>
+            ))}
+          </View>
+        )}
 
         <ShareButtons candidate={candidate} />
       </PageContainer>
@@ -432,6 +475,37 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
+
+  // Issue / Endorsement video sections
+  videoSection: {
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingTop: 16,
+  },
+  videoSectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.primary,
+    fontFamily: 'Quicksand_700Bold',
+    marginBottom: 14,
+  },
+  videoCard: {
+    marginBottom: 4,
+  },
+  videoCardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.text,
+    marginBottom: 10,
+  },
+  videoDivider: {
+    height: 1,
+    backgroundColor: Colors.border,
+    marginVertical: 16,
+  },
+
   shareSection: {
     paddingHorizontal: 24,
     paddingTop: 8,

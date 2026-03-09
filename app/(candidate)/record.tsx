@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, Platform, TextInput, ActivityIndicator } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
 import { Video, ResizeMode } from 'expo-av';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -12,6 +12,7 @@ import { Header } from '@/components/Header';
 import { CandidateNav } from '@/components/CandidateNav';
 import { PageContainer } from '@/components/PageContainer';
 import { MAX_RECORDING_SECONDS } from '@/constants/Config';
+import { countSlots } from '@/lib/videoSlots';
 
 type RecordingState = 'tips' | 'idle' | 'recording' | 'preview';
 type VideoType = 'overview' | 'issue' | 'endorsement';
@@ -32,6 +33,17 @@ const TIPS = [
   '⏱️ You have 60 seconds — use them wisely!',
 ];
 
+function getScreenTitle(videoType: VideoType): string {
+  if (videoType === 'issue') return 'Record Issue Video';
+  if (videoType === 'endorsement') return 'Upload Endorsement Video';
+  return 'Record Your Overview Video';
+}
+
+function getTitlePlaceholder(videoType: VideoType): string {
+  if (videoType === 'issue') return 'e.g. My position on school funding';
+  return 'e.g. Endorsement from Jane Smith';
+}
+
 export default function RecordScreen() {
   const { session } = useAuth();
   const params = useLocalSearchParams<{ video_type?: string }>();
@@ -49,6 +61,9 @@ export default function RecordScreen() {
   const [videoFilename, setVideoFilename] = useState<string | null>(null);
   const [videoDurationSecs, setVideoDurationSecs] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [videoTitle, setVideoTitle] = useState('');
+  const [slotsLoading, setSlotsLoading] = useState(videoType !== 'overview');
+  const [slotsError, setSlotsError] = useState<string | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Unlock orientation on mount (mobile only), re-lock to portrait on unmount.
@@ -56,7 +71,45 @@ export default function RecordScreen() {
   const isLandscape = useIsLandscape();
   const insets = useSafeAreaInsets();
 
-  // --- Endorsement upload flow (web) ---
+  // Slot validation for issue/endorsement
+  useEffect(() => {
+    if (videoType === 'overview' || !session?.user) {
+      setSlotsLoading(false);
+      return;
+    }
+
+    async function checkSlots() {
+      setSlotsLoading(true);
+      const [purchasesResult, videosResult] = await Promise.all([
+        supabase
+          .from('purchases')
+          .select('product_type')
+          .eq('candidate_id', session!.user.id),
+        supabase
+          .from('videos')
+          .select('video_type, status')
+          .eq('candidate_id', session!.user.id),
+      ]);
+
+      const purchases = purchasesResult.data ?? [];
+      const videos = videosResult.data ?? [];
+      const slots = countSlots(purchases, videos, videoType as 'issue' | 'endorsement');
+
+      if (slots.remaining === 0) {
+        const typeName = videoType === 'issue' ? 'issue' : 'endorsement';
+        setSlotsError(
+          `You have no ${typeName} video slots remaining. Purchase more from the Billing page.`
+        );
+      } else {
+        setSlotsError(null);
+      }
+      setSlotsLoading(false);
+    }
+
+    checkSlots();
+  }, [videoType, session]);
+
+  // --- Web endorsement upload flow ---
   if (Platform.OS === 'web' && videoType === 'endorsement') {
     const handleWebFileChange = (e: any) => {
       const file = e.target?.files?.[0];
@@ -66,86 +119,112 @@ export default function RecordScreen() {
       setVideoUri(url);
     };
 
+    const canSubmit = videoTitle.trim().length > 0;
+
     return (
       <View style={styles.webContainer}>
         <Header />
         <CandidateNav activeTab="record" />
         <PageContainer style={{ paddingTop: 24 }}>
-          <Text style={styles.webUploadTitle}>Upload Endorsement Video</Text>
+          <Text style={styles.webUploadTitle}>{getScreenTitle(videoType)}</Text>
           <Text style={styles.webUploadInstructions}>
             Select a video file from your device (max 60 seconds, MP4 or MOV recommended).
           </Text>
 
-          {/* Hidden file input */}
-          {/* @ts-ignore */}
-          <input
-            ref={webFileInputRef}
-            type="file"
-            accept="video/*"
-            style={{ display: 'none' }}
-            onChange={handleWebFileChange}
-          />
-
-          {videoUri ? (
-            <View style={styles.uploadSelectedContainer}>
-              <Text style={styles.uploadFilename}>{videoFilename ?? 'Selected file'}</Text>
-              <TouchableOpacity
-                style={[styles.button, submitting && styles.buttonDisabled]}
-                onPress={async () => {
-                  if (!videoUri || !session?.user) return;
-                  setSubmitting(true);
-                  const resp = await fetch(videoUri);
-                  const blob = await resp.blob();
-                  const arrayBuffer = await blob.arrayBuffer();
-                  const bytes = new Uint8Array(arrayBuffer);
-                  const candidateId = session.user.id;
-                  const filename = `${Date.now()}.mp4`;
-                  const storagePath = `${candidateId}/${filename}`;
-                  const uploadResponse = await supabase.storage
-                    .from('candidate-videos')
-                    .upload(storagePath, bytes, { contentType: blob.type || 'video/mp4', upsert: false });
-                  if (uploadResponse.error) {
-                    setSubmitting(false);
-                    Alert.alert('Upload Failed', uploadResponse.error.message);
-                    return;
-                  }
-                  const { error } = await supabase.from('videos').insert({
-                    candidate_id: candidateId,
-                    status: 'submitted',
-                    submitted_at: new Date().toISOString(),
-                    storage_path: storagePath,
-                    video_type: 'endorsement',
-                  });
-                  setSubmitting(false);
-                  if (error) {
-                    Alert.alert('Submission Failed', error.message);
-                    return;
-                  }
-                  Alert.alert(
-                    'Video Submitted',
-                    'Your endorsement video has been submitted for review.',
-                    [{ text: 'OK', onPress: () => router.replace('/dashboard') }]
-                  );
-                }}
-                disabled={submitting}
-              >
-                <Text style={styles.buttonText}>{submitting ? 'Uploading...' : 'Upload Video'}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.buttonSecondary, { marginTop: 8 }]}
-                onPress={() => { setVideoUri(null); setVideoFilename(null); }}
-                disabled={submitting}
-              >
-                <Text style={styles.buttonTextSecondary}>Choose a Different File</Text>
+          {slotsLoading ? (
+            <ActivityIndicator color={Colors.primary} style={{ marginBottom: 16 }} />
+          ) : slotsError ? (
+            <View style={styles.slotsErrorBox}>
+              <Text style={styles.slotsErrorText}>{slotsError}</Text>
+              <TouchableOpacity onPress={() => router.push('/(candidate)/subscribe')}>
+                <Text style={styles.slotsErrorLink}>Go to Billing</Text>
               </TouchableOpacity>
             </View>
           ) : (
-            <TouchableOpacity
-              style={styles.button}
-              onPress={() => webFileInputRef.current?.click()}
-            >
-              <Text style={styles.buttonText}>Choose Video File</Text>
-            </TouchableOpacity>
+            <>
+              {/* Title field */}
+              <Text style={styles.titleLabel}>Video Title</Text>
+              <TextInput
+                style={styles.titleInput}
+                placeholder={getTitlePlaceholder(videoType)}
+                placeholderTextColor={Colors.textSecondary}
+                value={videoTitle}
+                onChangeText={setVideoTitle}
+              />
+
+              {/* Hidden file input */}
+              {/* @ts-ignore */}
+              <input
+                ref={webFileInputRef}
+                type="file"
+                accept="video/*"
+                style={{ display: 'none' }}
+                onChange={handleWebFileChange}
+              />
+
+              {videoUri ? (
+                <View style={styles.uploadSelectedContainer}>
+                  <Text style={styles.uploadFilename}>{videoFilename ?? 'Selected file'}</Text>
+                  <TouchableOpacity
+                    style={[styles.button, (!canSubmit || submitting) && styles.buttonDisabled]}
+                    onPress={async () => {
+                      if (!videoUri || !session?.user || !canSubmit) return;
+                      setSubmitting(true);
+                      const resp = await fetch(videoUri);
+                      const blob = await resp.blob();
+                      const arrayBuffer = await blob.arrayBuffer();
+                      const bytes = new Uint8Array(arrayBuffer);
+                      const candidateId = session.user.id;
+                      const filename = `${Date.now()}.mp4`;
+                      const storagePath = `${candidateId}/${filename}`;
+                      const uploadResponse = await supabase.storage
+                        .from('candidate-videos')
+                        .upload(storagePath, bytes, { contentType: blob.type || 'video/mp4', upsert: false });
+                      if (uploadResponse.error) {
+                        setSubmitting(false);
+                        Alert.alert('Upload Failed', uploadResponse.error.message);
+                        return;
+                      }
+                      const { error } = await supabase.from('videos').insert({
+                        candidate_id: candidateId,
+                        status: 'submitted',
+                        submitted_at: new Date().toISOString(),
+                        storage_path: storagePath,
+                        video_type: 'endorsement',
+                        title: videoTitle.trim() || null,
+                      });
+                      setSubmitting(false);
+                      if (error) {
+                        Alert.alert('Submission Failed', error.message);
+                        return;
+                      }
+                      Alert.alert(
+                        'Video Submitted',
+                        'Your endorsement video has been submitted for review.',
+                        [{ text: 'OK', onPress: () => router.replace('/dashboard') }]
+                      );
+                    }}
+                    disabled={!canSubmit || submitting}
+                  >
+                    <Text style={styles.buttonText}>{submitting ? 'Uploading...' : 'Upload Video'}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.button, styles.buttonSecondary, { marginTop: 8 }]}
+                    onPress={() => { setVideoUri(null); setVideoFilename(null); }}
+                    disabled={submitting}
+                  >
+                    <Text style={styles.buttonTextSecondary}>Choose a Different File</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.button}
+                  onPress={() => webFileInputRef.current?.click()}
+                >
+                  <Text style={styles.buttonText}>Choose Video File</Text>
+                </TouchableOpacity>
+              )}
+            </>
           )}
 
           <TouchableOpacity
@@ -304,6 +383,8 @@ export default function RecordScreen() {
       status: 'submitted',
       submitted_at: new Date().toISOString(),
       storage_path: storagePath,
+      video_type: videoType,
+      title: (videoType !== 'overview' && videoTitle.trim()) ? videoTitle.trim() : null,
     });
 
     setSubmitting(false);
@@ -340,9 +421,13 @@ export default function RecordScreen() {
       'Your video has been submitted for review. You will be notified once it is approved.',
       [{ text: 'OK', onPress: () => router.replace('/dashboard') }]
     );
-  }, [videoUri, session]);
+  }, [videoUri, session, videoType, videoTitle]);
 
   const confirmSubmit = useCallback(() => {
+    if (videoType !== 'overview' && !videoTitle.trim()) {
+      Alert.alert('Title Required', 'Please enter a title for your video before submitting.');
+      return;
+    }
     Alert.alert(
       'Submit Video?',
       'Are you sure you want to submit this video for review?',
@@ -351,7 +436,7 @@ export default function RecordScreen() {
         { text: 'Yes, Submit', onPress: submitVideo },
       ]
     );
-  }, [submitVideo]);
+  }, [submitVideo, videoType, videoTitle]);
 
   // --- Endorsement upload screen (mobile, non-preview state) ---
   if (videoType === 'endorsement' && recordingState !== 'preview') {
@@ -360,77 +445,107 @@ export default function RecordScreen() {
         <Header />
         <CandidateNav activeTab="record" />
         <PageContainer style={{ paddingTop: 24 }}>
-          <Text style={styles.tipsScreenTitle}>Upload Endorsement Video</Text>
-          <Text style={styles.webUploadInstructions}>
-            Select a video file from your device (max 60 seconds, MP4 or MOV recommended).
-          </Text>
+          <Text style={styles.tipsScreenTitle}>{getScreenTitle(videoType)}</Text>
 
-          {videoUri ? (
-            <View style={styles.uploadSelectedContainer}>
-              <Text style={styles.uploadFilename}>{videoFilename ?? 'Selected file'}</Text>
-              {videoDurationSecs !== null && (
-                <Text style={styles.uploadDuration}>Duration: {formatDuration(videoDurationSecs)}</Text>
-              )}
-              <TouchableOpacity
-                style={[styles.readyButton, submitting && styles.buttonDisabled]}
-                onPress={async () => {
-                  if (!videoUri || !session?.user) return;
-                  setSubmitting(true);
-                  const candidateId = session.user.id;
-                  const filename = `${Date.now()}.mov`;
-                  const storagePath = `${candidateId}/${filename}`;
-                  // eslint-disable-next-line @typescript-eslint/no-require-imports
-                  const FileSystem = require('expo-file-system');
-                  const base64 = await FileSystem.readAsStringAsync(videoUri, {
-                    encoding: FileSystem.EncodingType.Base64,
-                  });
-                  const binaryString = atob(base64);
-                  const bytes = new Uint8Array(binaryString.length);
-                  for (let i = 0; i < binaryString.length; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
-                  }
-                  const uploadResponse = await supabase.storage
-                    .from('candidate-videos')
-                    .upload(storagePath, bytes, { contentType: 'video/quicktime', upsert: false });
-                  if (uploadResponse.error) {
-                    setSubmitting(false);
-                    Alert.alert('Upload Failed', uploadResponse.error.message);
-                    return;
-                  }
-                  const { error } = await supabase.from('videos').insert({
-                    candidate_id: candidateId,
-                    status: 'submitted',
-                    submitted_at: new Date().toISOString(),
-                    storage_path: storagePath,
-                    video_type: 'endorsement',
-                  });
-                  setSubmitting(false);
-                  if (error) {
-                    Alert.alert('Submission Failed', error.message);
-                    return;
-                  }
-                  Alert.alert(
-                    'Video Submitted',
-                    'Your endorsement video has been submitted for review.',
-                    [{ text: 'OK', onPress: () => router.replace('/dashboard') }]
-                  );
-                }}
-                disabled={submitting}
-              >
-                <Text style={styles.readyButtonText}>{submitting ? 'Uploading...' : 'Upload Video'}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.cancelButtonOutline}
-                onPress={() => { setVideoUri(null); setVideoFilename(null); setVideoDurationSecs(null); }}
-                disabled={submitting}
-              >
-                <Text style={styles.cancelButtonOutlineText}>Choose a Different File</Text>
+          {slotsLoading ? (
+            <ActivityIndicator color={Colors.primary} style={{ marginBottom: 16 }} />
+          ) : slotsError ? (
+            <View style={styles.slotsErrorBox}>
+              <Text style={styles.slotsErrorText}>{slotsError}</Text>
+              <TouchableOpacity onPress={() => router.push('/(candidate)/subscribe')}>
+                <Text style={styles.slotsErrorLink}>Go to Billing</Text>
               </TouchableOpacity>
             </View>
           ) : (
-            <TouchableOpacity style={styles.readyButton} onPress={handleMobilePickEndorsement}>
-              <Text style={styles.readyButtonText}>Choose Video File</Text>
-            </TouchableOpacity>
+            <>
+              {/* Title field */}
+              <Text style={styles.titleLabel}>Video Title</Text>
+              <TextInput
+                style={styles.titleInput}
+                placeholder={getTitlePlaceholder(videoType)}
+                placeholderTextColor={Colors.textSecondary}
+                value={videoTitle}
+                onChangeText={setVideoTitle}
+              />
+
+              <Text style={styles.webUploadInstructions}>
+                Select a video file from your device (max 60 seconds, MP4 or MOV recommended).
+              </Text>
+
+              {videoUri ? (
+                <View style={styles.uploadSelectedContainer}>
+                  <Text style={styles.uploadFilename}>{videoFilename ?? 'Selected file'}</Text>
+                  {videoDurationSecs !== null && (
+                    <Text style={styles.uploadDuration}>Duration: {formatDuration(videoDurationSecs)}</Text>
+                  )}
+                  <TouchableOpacity
+                    style={[styles.readyButton, (!videoTitle.trim() || submitting) && styles.buttonDisabled]}
+                    onPress={async () => {
+                      if (!videoUri || !session?.user || !videoTitle.trim()) {
+                        if (!videoTitle.trim()) {
+                          Alert.alert('Title Required', 'Please enter a title for your video.');
+                        }
+                        return;
+                      }
+                      setSubmitting(true);
+                      const candidateId = session.user.id;
+                      const filename = `${Date.now()}.mov`;
+                      const storagePath = `${candidateId}/${filename}`;
+                      // eslint-disable-next-line @typescript-eslint/no-require-imports
+                      const FileSystem = require('expo-file-system');
+                      const base64 = await FileSystem.readAsStringAsync(videoUri, {
+                        encoding: FileSystem.EncodingType.Base64,
+                      });
+                      const binaryString = atob(base64);
+                      const bytes = new Uint8Array(binaryString.length);
+                      for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                      }
+                      const uploadResponse = await supabase.storage
+                        .from('candidate-videos')
+                        .upload(storagePath, bytes, { contentType: 'video/quicktime', upsert: false });
+                      if (uploadResponse.error) {
+                        setSubmitting(false);
+                        Alert.alert('Upload Failed', uploadResponse.error.message);
+                        return;
+                      }
+                      const { error } = await supabase.from('videos').insert({
+                        candidate_id: candidateId,
+                        status: 'submitted',
+                        submitted_at: new Date().toISOString(),
+                        storage_path: storagePath,
+                        video_type: 'endorsement',
+                        title: videoTitle.trim(),
+                      });
+                      setSubmitting(false);
+                      if (error) {
+                        Alert.alert('Submission Failed', error.message);
+                        return;
+                      }
+                      Alert.alert(
+                        'Video Submitted',
+                        'Your endorsement video has been submitted for review.',
+                        [{ text: 'OK', onPress: () => router.replace('/dashboard') }]
+                      );
+                    }}
+                    disabled={!videoTitle.trim() || submitting}
+                  >
+                    <Text style={styles.readyButtonText}>{submitting ? 'Uploading...' : 'Upload Video'}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.cancelButtonOutline}
+                    onPress={() => { setVideoUri(null); setVideoFilename(null); setVideoDurationSecs(null); }}
+                    disabled={submitting}
+                  >
+                    <Text style={styles.cancelButtonOutlineText}>Choose a Different File</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity style={styles.readyButton} onPress={handleMobilePickEndorsement}>
+                  <Text style={styles.readyButtonText}>Choose Video File</Text>
+                </TouchableOpacity>
+              )}
+            </>
           )}
 
           <TouchableOpacity
@@ -452,35 +567,79 @@ export default function RecordScreen() {
         <Header />
         <CandidateNav activeTab="record" />
         <PageContainer style={{ paddingTop: 24 }}>
-          <Text style={styles.tipsScreenTitle}>Before You Record</Text>
+          <Text style={styles.tipsScreenTitle}>{getScreenTitle(videoType)}</Text>
 
-          {/* Landscape orientation graphic */}
-          <View style={styles.landscapeGraphicContainer}>
-            <View style={styles.landscapePhoneOuter}>
-              <View style={styles.landscapePhoneInner}>
-                <Text style={styles.landscapePhoneCameraIcon}>📹</Text>
-              </View>
-              {/* Home indicator pill */}
-              <View style={styles.landscapeHomeIndicator} />
+          {/* Slot error for issue videos */}
+          {slotsLoading ? (
+            <ActivityIndicator color={Colors.primary} style={{ marginBottom: 16 }} />
+          ) : slotsError ? (
+            <View style={styles.slotsErrorBox}>
+              <Text style={styles.slotsErrorText}>{slotsError}</Text>
+              <TouchableOpacity onPress={() => router.push('/(candidate)/subscribe')}>
+                <Text style={styles.slotsErrorLink}>Go to Billing</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.cancelButtonOutline, { marginTop: 16 }]}
+                onPress={() => router.replace('/dashboard')}
+              >
+                <Text style={styles.cancelButtonOutlineText}>Go Back</Text>
+              </TouchableOpacity>
             </View>
-            <Text style={styles.landscapeLabel}>Rotate to landscape mode</Text>
-          </View>
+          ) : (
+            <>
+              {/* Title field for issue videos */}
+              {videoType === 'issue' && (
+                <>
+                  <Text style={styles.titleLabel}>Video Title</Text>
+                  <TextInput
+                    style={[styles.titleInput, { marginBottom: 24 }]}
+                    placeholder={getTitlePlaceholder(videoType)}
+                    placeholderTextColor={Colors.textSecondary}
+                    value={videoTitle}
+                    onChangeText={setVideoTitle}
+                  />
+                </>
+              )}
 
-          <View style={styles.tipsListContainer}>
-            {TIPS.map((tip, i) => (
-              <View key={i} style={styles.tipRow}>
-                <Text style={styles.tipRowText}>{tip}</Text>
+              {/* Landscape orientation graphic */}
+              <View style={styles.landscapeGraphicContainer}>
+                <View style={styles.landscapePhoneOuter}>
+                  <View style={styles.landscapePhoneInner}>
+                    <Text style={styles.landscapePhoneCameraIcon}>📹</Text>
+                  </View>
+                  {/* Home indicator pill */}
+                  <View style={styles.landscapeHomeIndicator} />
+                </View>
+                <Text style={styles.landscapeLabel}>Rotate to landscape mode</Text>
               </View>
-            ))}
-          </View>
 
-          <TouchableOpacity style={styles.readyButton} onPress={() => setRecordingState('idle')}>
-            <Text style={styles.readyButtonText}>I'm Ready to Record</Text>
-          </TouchableOpacity>
+              <View style={styles.tipsListContainer}>
+                {TIPS.map((tip, i) => (
+                  <View key={i} style={styles.tipRow}>
+                    <Text style={styles.tipRowText}>{tip}</Text>
+                  </View>
+                ))}
+              </View>
 
-          <TouchableOpacity style={styles.cancelButtonOutline} onPress={() => router.replace('/dashboard')}>
-            <Text style={styles.cancelButtonOutlineText}>Cancel</Text>
-          </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.readyButton, (videoType === 'issue' && !videoTitle.trim()) && styles.buttonDisabled]}
+                onPress={() => {
+                  if (videoType === 'issue' && !videoTitle.trim()) {
+                    Alert.alert('Title Required', 'Please enter a title before recording.');
+                    return;
+                  }
+                  setRecordingState('idle');
+                }}
+                disabled={videoType === 'issue' && !videoTitle.trim()}
+              >
+                <Text style={styles.readyButtonText}>I'm Ready to Record</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.cancelButtonOutline} onPress={() => router.replace('/dashboard')}>
+                <Text style={styles.cancelButtonOutlineText}>Cancel</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </PageContainer>
       </View>
     );
@@ -701,17 +860,57 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
+  // --- Title field ---
+  titleLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 6,
+  },
+  titleInput: {
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: Colors.text,
+    backgroundColor: Colors.card,
+    marginBottom: 16,
+  },
+
+  // --- Slot error ---
+  slotsErrorBox: {
+    backgroundColor: '#fee2e2',
+    borderRadius: 10,
+    padding: 16,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  slotsErrorText: {
+    fontSize: 14,
+    color: '#991b1b',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 10,
+  },
+  slotsErrorLink: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+
   // --- Tips screen ---
   tipsScreen: {
     flex: 1,
     backgroundColor: Colors.background,
   },
   tipsScreenTitle: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: 'bold',
     color: Colors.text,
     textAlign: 'center',
-    marginBottom: 28,
+    marginBottom: 20,
   },
   landscapeGraphicContainer: {
     alignItems: 'center',
