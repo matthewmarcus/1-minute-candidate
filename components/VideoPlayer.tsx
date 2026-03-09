@@ -23,7 +23,7 @@ export function VideoPlayer({ youtubeUrl }: VideoPlayerProps) {
   const videoId = extractYouTubeId(youtubeUrl);
   if (!videoId) return null;
 
-  const embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`;
+  const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1`;
 
   if (Platform.OS === 'web') {
     return (

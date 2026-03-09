@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { fonts } from '@/constants/fonts';
 
@@ -18,7 +18,17 @@ const TABS: { key: TabName; label: string; href: string }[] = [
 export function CandidateNav({ activeTab }: CandidateNavProps) {
   return (
     <View style={styles.container}>
-      <View style={styles.innerContainer}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingHorizontal: 20,
+          gap: 24,
+        }}
+        style={{ maxWidth: 680, width: '100%', alignSelf: 'center' }}
+      >
         {TABS.map((tab) => {
           const active = tab.key === activeTab;
           return (
@@ -35,7 +45,7 @@ export function CandidateNav({ activeTab }: CandidateNavProps) {
             </TouchableOpacity>
           );
         })}
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -45,13 +55,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
-  },
-  innerContainer: {
-    flexDirection: 'row',
-    maxWidth: 680,
-    width: '100%',
-    alignSelf: 'center',
-    paddingHorizontal: 20,
   },
   tab: {
     paddingHorizontal: 16,

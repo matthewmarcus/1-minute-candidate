@@ -410,6 +410,8 @@ const stepperTextStyle = {
 
 export default function CandidateDashboard() {
   const { session, signOut } = useAuth();
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
   const [profile, setProfile] = useState<Partial<Candidate> | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
   const [purchases, setPurchases] = useState<{ product_type: string }[]>([]);
@@ -544,9 +546,9 @@ export default function CandidateDashboard() {
         {profileUnlocked && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Add More Videos</Text>
-            <View style={styles.addVideosRow}>
+            <View style={[styles.addVideosRow, isMobile && { flexDirection: 'column' }]}>
               {/* Issue Video card */}
-              <View style={styles.addVideoCard}>
+              <View style={[styles.addVideoCard, { flex: isMobile ? undefined : 1 }]}>
                 <Ionicons name="mic-outline" size={28} color={Colors.primary} style={styles.addVideoIcon} />
                 <Text style={styles.addVideoTitle}>Issue Video</Text>
                 <Text style={styles.addVideoDescription}>
@@ -587,7 +589,7 @@ export default function CandidateDashboard() {
               </View>
 
               {/* Endorsement Video card */}
-              <View style={styles.addVideoCard}>
+              <View style={[styles.addVideoCard, { flex: isMobile ? undefined : 1 }]}>
                 <Ionicons name="people-outline" size={28} color={Colors.primary} style={styles.addVideoIcon} />
                 <Text style={styles.addVideoTitle}>Endorsement Video</Text>
                 <Text style={styles.addVideoDescription}>
@@ -923,7 +925,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   addVideoCard: {
-    flex: 1,
     backgroundColor: Colors.background,
     borderRadius: 10,
     padding: 14,
