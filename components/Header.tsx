@@ -40,7 +40,7 @@ export function Header({
     if (showInlineNav) {
       right = (
         <View style={styles.navLinks}>
-          <TouchableOpacity onPress={() => {}}>
+          <TouchableOpacity onPress={() => router.push('/(voter)/find')}>
             <Text style={styles.navLink}>For Voters</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/(candidate)/login')}>
@@ -121,7 +121,7 @@ export function Header({
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.mobileMenuItem}
-                onPress={() => setMenuOpen(false)}
+                onPress={() => { setMenuOpen(false); router.push('/(voter)/find'); }}
               >
                 <Text style={styles.mobileMenuLink}>For Voters</Text>
               </TouchableOpacity>
