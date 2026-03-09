@@ -66,7 +66,7 @@ function SlotPill({ used, purchased }: { used: number; purchased: number }) {
 
 function OverviewVideoSection({ video, profileUnlocked }: { video: Video | null; profileUnlocked: boolean }) {
   const { width: windowWidth } = useWindowDimensions();
-  const videoWidth = Math.min(windowWidth, 680) - 40;
+  const videoWidth = Math.min(windowWidth, 680) - 72;
   const videoHeight = videoWidth * (9 / 16);
 
   if (!profileUnlocked) {
@@ -140,7 +140,7 @@ function IssueVideosSection({
   const slots = countSlots(purchases, videos, 'issue');
   const [expandedVideoId, setExpandedVideoId] = useState<string | null>(null);
   const { width: windowWidth } = useWindowDimensions();
-  const videoWidth = Math.min(windowWidth, 680) - 40;
+  const videoWidth = Math.min(windowWidth, 680) - 72;
   const videoHeight = videoWidth * (9 / 16);
 
   return (
@@ -214,7 +214,7 @@ function EndorsementVideosSection({
   const slots = countSlots(purchases, videos, 'endorsement');
   const [expandedVideoId, setExpandedVideoId] = useState<string | null>(null);
   const { width: windowWidth } = useWindowDimensions();
-  const videoWidth = Math.min(windowWidth, 680) - 40;
+  const videoWidth = Math.min(windowWidth, 680) - 72;
   const videoHeight = videoWidth * (9 / 16);
 
   return (

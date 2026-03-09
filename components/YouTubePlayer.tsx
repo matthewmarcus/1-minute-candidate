@@ -26,11 +26,12 @@ export function YouTubePlayer({ videoId, width, height, borderRadius = 8 }: YouT
 
   // Native: thumbnail + tap to open in YouTube app or browser
   return (
-    <TouchableOpacity
-      onPress={() => Linking.openURL(`https://www.youtube.com/watch?v=${videoId}`)}
-      activeOpacity={0.9}
-    >
-      <View style={{ width, height, borderRadius, overflow: 'hidden', backgroundColor: '#000' }}>
+    <View style={{ width, height, borderRadius, overflow: 'hidden' }}>
+      <TouchableOpacity
+        onPress={() => Linking.openURL(`https://www.youtube.com/watch?v=${videoId}`)}
+        activeOpacity={0.9}
+        style={{ width, height }}
+      >
         <Image
           source={{ uri: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` }}
           style={{ width, height }}
@@ -38,24 +39,21 @@ export function YouTubePlayer({ videoId, width, height, borderRadius = 8 }: YouT
         />
         {/* Play button overlay */}
         <View style={{
-          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-          alignItems: 'center', justifyContent: 'center',
+          position: 'absolute', top: 0, left: 0,
+          width, height,
+          alignItems: 'center',
+          justifyContent: 'center',
         }}>
           <View style={{
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            borderRadius: 32,
-            padding: 12,
+            backgroundColor: 'rgba(0,0,0,0.55)',
+            borderRadius: 36,
+            width: 64, height: 64,
+            alignItems: 'center', justifyContent: 'center',
           }}>
             <Ionicons name="play" size={32} color="#ffffff" />
           </View>
         </View>
-      </View>
-      <Text style={{
-        color: '#0F1F5C', fontSize: 12, marginTop: 6,
-        fontFamily: 'Quicksand_600SemiBold', textAlign: 'center',
-      }}>
-        Tap to watch on YouTube
-      </Text>
-    </TouchableOpacity>
+      </TouchableOpacity>
+    </View>
   );
 }
