@@ -22,6 +22,8 @@ export interface Candidate {
   phone: string | null;
   city: string | null;
   slug: string | null;
+  race_level: 'local' | 'state' | 'national' | null;
+  profile_unlocked: boolean;
 }
 
 export interface Video {

@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Linking,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
@@ -100,7 +101,37 @@ function VideoThumbnailWithPlay({ videoId, youtubeUrl }: { videoId: string; yout
   );
 }
 
-function VideoCard({ video, onRecord }: { video: Video | null; onRecord: () => void }) {
+function VideoCard({
+  video,
+  onRecord,
+  profileUnlocked,
+}: {
+  video: Video | null;
+  onRecord: () => void;
+  profileUnlocked: boolean;
+}) {
+  // Show lock CTA when profile is not yet unlocked
+  if (!profileUnlocked) {
+    return (
+      <View style={styles.card}>
+        <View style={styles.lockCtaContainer}>
+          <Ionicons name="lock-closed-outline" size={32} color={Colors.textSecondary} style={styles.lockIcon} />
+          <Text style={styles.lockTitle}>Unlock Your Profile to Get Started</Text>
+          <Text style={styles.lockBody}>
+            Purchase your profile setup to record your video and go live to voters.
+          </Text>
+          <TouchableOpacity
+            style={styles.ctaButton}
+            onPress={() => router.push('/(candidate)/subscribe')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.ctaButtonText}>Unlock My Profile</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   if (!video) {
     return (
       <View style={styles.card}>
@@ -315,6 +346,7 @@ export default function CandidateDashboard() {
         <VideoCard
           video={video === undefined ? null : video}
           onRecord={() => router.push('/(candidate)/record')}
+          profileUnlocked={profile?.profile_unlocked ?? false}
         />
 
         {/* Profile completeness */}
@@ -456,6 +488,30 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#065f46',
+  },
+
+  // Lock CTA
+  lockCtaContainer: {
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  lockIcon: {
+    marginBottom: 12,
+  },
+  lockTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.text,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  lockBody: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 16,
+    maxWidth: 280,
   },
 
   // Video card states

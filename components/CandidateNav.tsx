@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { fonts } from '@/constants/fonts';
 
-type TabName = 'dashboard' | 'profile' | 'record';
+type TabName = 'dashboard' | 'profile' | 'record' | 'subscribe';
 
 interface CandidateNavProps {
   activeTab: TabName;
@@ -13,6 +13,7 @@ const TABS: { key: TabName; label: string; href: string }[] = [
   { key: 'dashboard', label: 'Dashboard', href: '/(candidate)/' },
   { key: 'profile', label: 'My Profile', href: '/(candidate)/profile' },
   { key: 'record', label: 'Record Video', href: '/(candidate)/record' },
+  { key: 'subscribe', label: 'Billing', href: '/(candidate)/subscribe' },
 ];
 
 export function CandidateNav({ activeTab }: CandidateNavProps) {

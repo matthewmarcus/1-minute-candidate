@@ -1,29 +1,98 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Modal,
+} from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
 import { Header } from '@/components/Header';
+
+type RaceLevel = 'local' | 'state' | 'national';
+
+interface OfficeOption {
+  label: string;
+  level: RaceLevel;
+}
+
+const OFFICE_GROUPS: { title: string; level: RaceLevel; offices: string[] }[] = [
+  {
+    title: 'LOCAL OFFICES',
+    level: 'local',
+    offices: [
+      'City Council',
+      'Mayor',
+      'School Board Member',
+      'County Commissioner',
+      'Judge',
+      'City Clerk',
+      'Alderman',
+      'District Attorney',
+      'Sheriff',
+    ],
+  },
+  {
+    title: 'STATE OFFICES',
+    level: 'state',
+    offices: [
+      'State Representative',
+      'State Senator',
+      'Governor',
+      'Lieutenant Governor',
+      'State Attorney General',
+      'Secretary of State',
+      'State Treasurer',
+    ],
+  },
+  {
+    title: 'NATIONAL OFFICES',
+    level: 'national',
+    offices: ['US Representative', 'US Senator', 'President', 'Vice President'],
+  },
+];
+
+function getLevelForOffice(label: string): RaceLevel {
+  for (const group of OFFICE_GROUPS) {
+    if (group.offices.includes(label)) return group.level;
+  }
+  return 'local';
+}
 
 export default function CandidateRegister() {
   const [form, setForm] = useState({
     name: '',
     email: '',
     password: '',
-    officeSOught: '',
+    officeSought: '',
+    raceLevel: 'local' as RaceLevel,
     party: '',
     state: '',
     district: '',
     bio: '',
   });
   const [loading, setLoading] = useState(false);
+  const [pickerVisible, setPickerVisible] = useState(false);
 
   function updateField(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
+  function selectOffice(label: string) {
+    const level = getLevelForOffice(label);
+    setForm((prev) => ({ ...prev, officeSought: label, raceLevel: level }));
+    setPickerVisible(false);
+  }
+
   async function handleRegister() {
-    if (!form.name || !form.email || !form.password || !form.officeSOught) {
+    if (!form.name || !form.email || !form.password || !form.officeSought) {
       Alert.alert('Error', 'Please fill in all required fields.');
       return;
     }
@@ -40,7 +109,8 @@ export default function CandidateRegister() {
       options: {
         data: {
           name: form.name,
-          office_sought: form.officeSOught,
+          office_sought: form.officeSought,
+          race_level: form.raceLevel,
           party: form.party,
           state: form.state,
           district: form.district,
@@ -60,6 +130,112 @@ export default function CandidateRegister() {
       'Account Created',
       'Please check your email to confirm your account, then log in.',
       [{ text: 'OK', onPress: () => router.replace('/(candidate)/login') }]
+    );
+  }
+
+  // Web: render a native <select> element
+  function renderOfficePicker() {
+    if (Platform.OS === 'web') {
+      return (
+        <View style={styles.webSelectWrapper}>
+          {/* @ts-ignore */}
+          <select
+            value={form.officeSought}
+            onChange={(e: any) => selectOffice(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '14px 16px',
+              fontSize: 16,
+              color: form.officeSought ? Colors.text : Colors.textSecondary,
+              backgroundColor: Colors.card,
+              border: 'none',
+              borderRadius: 8,
+              outline: 'none',
+              cursor: 'pointer',
+              appearance: 'none',
+              WebkitAppearance: 'none',
+            } as any}
+          >
+            {/* @ts-ignore */}
+            <option value="" disabled>
+              Select an office...
+            </option>
+            {OFFICE_GROUPS.map((group) => (
+              // @ts-ignore
+              <optgroup key={group.title} label={group.title}>
+                {group.offices.map((office) => (
+                  // @ts-ignore
+                  <option key={office} value={office}>
+                    {office}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+          {/* Chevron indicator */}
+          <View style={styles.webSelectChevron} pointerEvents="none">
+            <Text style={styles.webSelectChevronText}>▾</Text>
+          </View>
+        </View>
+      );
+    }
+
+    // Native: TouchableOpacity that opens Modal
+    return (
+      <>
+        <TouchableOpacity
+          style={styles.pickerButton}
+          onPress={() => setPickerVisible(true)}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.pickerButtonText, !form.officeSought && styles.pickerPlaceholder]}>
+            {form.officeSought || 'Select an office...'}
+          </Text>
+          <Text style={styles.pickerChevron}>▾</Text>
+        </TouchableOpacity>
+
+        <Modal
+          visible={pickerVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setPickerVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalSheet}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Your Office</Text>
+                <TouchableOpacity onPress={() => setPickerVisible(false)}>
+                  <Text style={styles.modalClose}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.modalScroll}>
+                {OFFICE_GROUPS.map((group) => (
+                  <View key={group.title}>
+                    <Text style={styles.groupTitle}>{group.title}</Text>
+                    {group.offices.map((office) => {
+                      const selected = form.officeSought === office;
+                      return (
+                        <TouchableOpacity
+                          key={office}
+                          style={[styles.officeRow, selected && styles.officeRowSelected]}
+                          onPress={() => selectOffice(office)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[styles.officeLabel, selected && styles.officeLabelSelected]}>
+                            {office}
+                          </Text>
+                          {selected && <Text style={styles.officeCheck}>✓</Text>}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                ))}
+                <View style={{ height: 32 }} />
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      </>
     );
   }
 
@@ -103,14 +279,8 @@ export default function CandidateRegister() {
           secureTextEntry
         />
 
-        <Text style={styles.label}>Office Sought *</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. City Council District 3"
-          placeholderTextColor={Colors.textSecondary}
-          value={form.officeSOught}
-          onChangeText={(v) => updateField('officeSOught', v)}
-        />
+        <Text style={styles.label}>What office are you running for? *</Text>
+        {renderOfficePicker()}
 
         <Text style={styles.label}>Party Affiliation</Text>
         <TextInput
@@ -229,5 +399,118 @@ const styles = StyleSheet.create({
   linkText: {
     color: Colors.primary,
     fontSize: 15,
+  },
+
+  // Native picker button
+  pickerButton: {
+    backgroundColor: Colors.card,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  pickerButtonText: {
+    fontSize: 16,
+    color: Colors.text,
+    flex: 1,
+  },
+  pickerPlaceholder: {
+    color: Colors.textSecondary,
+  },
+  pickerChevron: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    marginLeft: 8,
+  },
+
+  // Web select wrapper
+  webSelectWrapper: {
+    backgroundColor: Colors.card,
+    borderRadius: 8,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  webSelectChevron: {
+    position: 'absolute',
+    right: 14,
+    pointerEvents: 'none',
+  } as any,
+  webSelectChevronText: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+  },
+
+  // Native modal
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  modalSheet: {
+    backgroundColor: Colors.background,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    maxHeight: '75%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  modalClose: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+  modalScroll: {
+    paddingHorizontal: 4,
+  },
+  groupTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+    letterSpacing: 0.8,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 4,
+  },
+  officeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  officeRowSelected: {
+    backgroundColor: '#EEF2FF',
+  },
+  officeLabel: {
+    fontSize: 16,
+    color: Colors.text,
+  },
+  officeLabelSelected: {
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+  officeCheck: {
+    fontSize: 16,
+    color: Colors.primary,
+    fontWeight: '700',
   },
 });
