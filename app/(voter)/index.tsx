@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,9 +9,11 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import Svg, { Path } from 'react-native-svg';
 import { Header } from '@/components/Header';
 import { PageContainer } from '@/components/PageContainer';
 import { fonts } from '@/constants/fonts';
+import { supabase } from '@/lib/supabase';
 
 const NAVY = '#0F1F5C';
 const RED = '#E8192F';
@@ -21,6 +24,13 @@ const MUTED = '#9CA3AF';
 export default function VoterHome() {
   const { width } = useWindowDimensions();
   const isWide = width >= 600;
+  const [isSignedIn, setIsSignedIn] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsSignedIn(!!session);
+    });
+  }, []);
 
   return (
     <View style={styles.root}>
@@ -68,7 +78,7 @@ export default function VoterHome() {
             </Text>
             <TouchableOpacity
               style={[styles.cardBtn, { backgroundColor: RED }]}
-              onPress={() => router.push('/(candidate)/login')}
+              onPress={() => isSignedIn ? router.push('/(candidate)') : router.push('/(candidate)/login')}
               activeOpacity={0.85}
             >
               <Text style={styles.cardBtnText}>Get Started</Text>
@@ -115,7 +125,9 @@ export default function VoterHome() {
               onPress={() => Linking.openURL('https://x.com/1MinCan')}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Ionicons name="logo-twitter" size={26} color={GRAY} />
+              <Svg width={20} height={20} viewBox="0 0 24 24" fill={GRAY}>
+                <Path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+              </Svg>
             </TouchableOpacity>
           </View>
 

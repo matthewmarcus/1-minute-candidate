@@ -60,7 +60,7 @@ export function Header({
           <TouchableOpacity onPress={() => router.push('/(voter)/find')}>
             <Text style={styles.navLink}>For Voters</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/(candidate)/login')}>
+          <TouchableOpacity onPress={() => isSignedIn ? router.push('/(candidate)') : router.push('/(candidate)/login')}>
             <Text style={styles.navLink}>For Candidates</Text>
           </TouchableOpacity>
           {isSignedIn ? (
@@ -162,7 +162,7 @@ export function Header({
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.mobileMenuItem}
-                onPress={() => { setMenuOpen(false); router.push('/(candidate)/login'); }}
+                onPress={() => { setMenuOpen(false); isSignedIn ? router.push('/(candidate)') : router.push('/(candidate)/login'); }}
               >
                 <Text style={styles.mobileMenuLink}>For Candidates</Text>
               </TouchableOpacity>
