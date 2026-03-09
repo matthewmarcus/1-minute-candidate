@@ -16,7 +16,7 @@ export default function PaymentSuccessScreen() {
 
   return (
     <View style={styles.root}>
-      <Header variant="candidate" />
+      <Header />
       <View style={styles.content}>
         <Ionicons name="checkmark-circle" size={64} color="#16A34A" style={styles.icon} />
 
