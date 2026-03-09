@@ -8,9 +8,10 @@ interface HeaderProps {
   showBack?: boolean;
   onBack?: () => void;
   rightContent?: ReactNode;
+  rightExpand?: boolean;
 }
 
-export function Header({ showBack = false, onBack, rightContent }: HeaderProps) {
+export function Header({ showBack = false, onBack, rightContent, rightExpand = false }: HeaderProps) {
   const insets = useSafeAreaInsets();
 
   function handleBack() {
@@ -46,7 +47,7 @@ export function Header({ showBack = false, onBack, rightContent }: HeaderProps) 
           <Text style={styles.logoText}>1 Minute Candidate</Text>
         </View>
 
-        <View style={styles.rightSlot}>
+        <View style={rightExpand ? styles.rightSlotExpanded : styles.rightSlot}>
           {rightContent ?? null}
         </View>
       </View>
@@ -98,6 +99,11 @@ const styles = StyleSheet.create({
   },
   rightSlot: {
     width: 36,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  rightSlotExpanded: {
+    flex: 1,
     alignItems: 'flex-end',
     justifyContent: 'center',
   },
