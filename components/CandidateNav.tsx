@@ -1,6 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
-import { supabase } from '@/lib/supabase';
 import { fonts } from '@/constants/fonts';
 
 type TabName = 'dashboard' | 'profile' | 'record' | 'subscribe';
@@ -17,11 +16,6 @@ const TABS: { key: TabName; label: string; href: string }[] = [
 ];
 
 export function CandidateNav({ activeTab }: CandidateNavProps) {
-  async function handleSignOut() {
-    await supabase.auth.signOut();
-    router.replace('/(voter)');
-  }
-
   return (
     <View style={styles.container}>
       <View style={styles.innerContainer}>
@@ -41,14 +35,6 @@ export function CandidateNav({ activeTab }: CandidateNavProps) {
             </TouchableOpacity>
           );
         })}
-
-        <TouchableOpacity
-          style={styles.tab}
-          onPress={handleSignOut}
-          accessibilityLabel="Sign Out"
-        >
-          <Text style={[styles.tabText, styles.signOutText]}>Sign Out</Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -90,8 +76,5 @@ const styles = StyleSheet.create({
     height: 2,
     backgroundColor: '#E8192F',
     borderRadius: 1,
-  },
-  signOutText: {
-    color: '#6B7280',
   },
 });

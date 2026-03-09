@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, Modal, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { fonts } from '@/constants/fonts';
+import { supabase } from '@/lib/supabase';
 
 const NAVY = '#0F1F5C';
 
@@ -24,6 +25,22 @@ export function Header({
   const { width } = useWindowDimensions();
   const showInlineNav = width >= 768;
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isSignedIn, setIsSignedIn] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsSignedIn(!!session);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => setIsSignedIn(!!session)
+    );
+    return () => subscription.unsubscribe();
+  }, []);
+
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+    router.replace('/(voter)');
+  }
 
   function handleBack() {
     if (onBack) {
@@ -46,9 +63,21 @@ export function Header({
           <TouchableOpacity onPress={() => router.push('/(candidate)/login')}>
             <Text style={styles.navLink}>For Candidates</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/(candidate)/login')}>
-            <Text style={styles.navLink}>Sign In</Text>
-          </TouchableOpacity>
+          {isSignedIn ? (
+            <TouchableOpacity
+              style={styles.authButtonSignOut}
+              onPress={handleSignOut}
+            >
+              <Text style={styles.authButtonText}>Sign Out</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.authButtonSignIn}
+              onPress={() => router.push('/(candidate)/login')}
+            >
+              <Text style={styles.authButtonText}>Sign In</Text>
+            </TouchableOpacity>
+          )}
         </View>
       );
     } else {
@@ -80,12 +109,18 @@ export function Header({
                   <Text style={styles.backArrow}>‹</Text>
                 </TouchableOpacity>
               )}
-              <Image
-                source={require('@/assets/images/logo-square.png')}
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
-              <Text style={styles.logoText}>1 Minute Candidate</Text>
+              <TouchableOpacity
+                style={styles.logoButton}
+                onPress={() => router.push('/(voter)')}
+                accessibilityLabel="Go to homepage"
+              >
+                <Image
+                  source={require('@/assets/images/logo-square.png')}
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                />
+                <Text style={styles.logoText}>1 Minute Candidate</Text>
+              </TouchableOpacity>
             </View>
 
             {/* RIGHT: nav links, hamburger, or custom content */}
@@ -131,12 +166,23 @@ export function Header({
               >
                 <Text style={styles.mobileMenuLink}>For Candidates</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.mobileMenuItem}
-                onPress={() => { setMenuOpen(false); router.push('/(candidate)/login'); }}
-              >
-                <Text style={styles.mobileMenuLink}>Sign In</Text>
-              </TouchableOpacity>
+              <View style={[styles.mobileMenuItem, { paddingVertical: 14 }]}>
+                {isSignedIn ? (
+                  <TouchableOpacity
+                    style={styles.mobileAuthButtonSignOut}
+                    onPress={() => { setMenuOpen(false); handleSignOut(); }}
+                  >
+                    <Text style={styles.mobileAuthButtonSignOutText}>Sign Out</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.mobileAuthButtonSignIn}
+                    onPress={() => { setMenuOpen(false); router.push('/(candidate)/login'); }}
+                  >
+                    <Text style={styles.mobileAuthButtonSignInText}>Sign In</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           </TouchableOpacity>
         </Modal>
@@ -177,6 +223,10 @@ const styles = StyleSheet.create({
     lineHeight: 36,
     fontWeight: '300',
   },
+  logoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   logoImage: {
     width: 36,
     height: 36,
@@ -201,6 +251,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: fonts.semiBold,
     marginLeft: 20,
+  },
+  authButtonSignIn: {
+    marginLeft: 20,
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    backgroundColor: NAVY,
+    borderWidth: 1,
+    borderColor: '#fff',
+  },
+  authButtonSignOut: {
+    marginLeft: 20,
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#fff',
+  },
+  authButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontFamily: fonts.semiBold,
   },
   modalOverlay: {
     flex: 1,
@@ -227,13 +300,39 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   mobileMenuItem: {
-    paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
+    paddingVertical: 14,
   },
   mobileMenuLink: {
     color: NAVY,
     fontSize: 16,
+    fontFamily: fonts.semiBold,
+  },
+  mobileAuthButtonSignIn: {
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    backgroundColor: NAVY,
+    alignSelf: 'flex-start',
+  },
+  mobileAuthButtonSignInText: {
+    color: '#fff',
+    fontSize: 13,
+    fontFamily: fonts.semiBold,
+  },
+  mobileAuthButtonSignOut: {
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: NAVY,
+    alignSelf: 'flex-start',
+  },
+  mobileAuthButtonSignOutText: {
+    color: NAVY,
+    fontSize: 13,
     fontFamily: fonts.semiBold,
   },
 });
