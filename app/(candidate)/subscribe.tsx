@@ -102,37 +102,26 @@ export default function SubscribeScreen() {
   async function handlePurchase(product_type: string) {
     setPurchasing(true);
     try {
-      const {
-        data: { session: currentSession },
-      } = await supabase.auth.getSession();
-
       const appUrl =
         Platform.OS === 'web'
-          ? (window as any).location.origin
+          ? (typeof window !== 'undefined' ? window.location.origin : 'https://1minutecandidate.com')
           : 'https://1minutecandidate.com';
 
-      const response = await fetch(
-        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/create-checkout`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${currentSession?.access_token}`,
-          },
-          body: JSON.stringify({
-            product_type,
-            success_url: `${appUrl}/(candidate)/payment-success`,
-            cancel_url: `${appUrl}/(candidate)/subscribe`,
-          }),
-        }
-      );
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: {
+          product_type,
+          success_url: `${appUrl}/(candidate)/payment-success`,
+          cancel_url: `${appUrl}/(candidate)/subscribe`,
+        },
+      });
 
-      const { url, error } = await response.json();
-      if (error) throw new Error(error);
+      if (error) throw error;
+      if (!data?.url) throw new Error('No checkout URL returned');
 
-      await Linking.openURL(url);
+      await Linking.openURL(data.url);
     } catch (err) {
-      Alert.alert('Error', 'Could not start checkout. Please try again.');
+      const message = err instanceof Error ? err.message : 'Something went wrong';
+      Alert.alert('Error', `Could not start checkout: ${message}`);
     } finally {
       setPurchasing(false);
     }
