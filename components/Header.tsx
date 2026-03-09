@@ -3,21 +3,44 @@ import { View, Text, Image, TouchableOpacity, StyleSheet, Platform, StatusBar, u
 import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const ADMIN_SESSION_KEY = 'admin_session';
+
+function getAdminStorage() {
+  if (Platform.OS === 'web') {
+    return {
+      getItem: (key: string) =>
+        Promise.resolve(typeof window !== 'undefined' ? window.localStorage.getItem(key) : null),
+      removeItem: (key: string) =>
+        Promise.resolve(typeof window !== 'undefined' ? window.localStorage.removeItem(key) : undefined),
+    };
+  }
+  return AsyncStorage;
+}
 
 export function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const [isSignedIn, setIsSignedIn] = useState(false);
+  const [isAdminSignedIn, setIsAdminSignedIn] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
 
   const isAdmin = pathname.startsWith('/admin');
+  const showSignOut = isSignedIn || isAdminSignedIn;
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setIsSignedIn(!!session);
     });
+
+    const adminStorage = getAdminStorage();
+    adminStorage.getItem(ADMIN_SESSION_KEY).then((val) => {
+      setIsAdminSignedIn(val === 'true');
+    });
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => setIsSignedIn(!!session)
     );
@@ -78,16 +101,20 @@ export function Header() {
             <TouchableOpacity
               style={styles.authButton}
               onPress={async () => {
-                if (isSignedIn) {
+                if (isAdminSignedIn) {
+                  await getAdminStorage().removeItem(ADMIN_SESSION_KEY);
+                  setIsAdminSignedIn(false);
+                  router.replace('/admin/login');
+                } else if (isSignedIn) {
                   await supabase.auth.signOut();
-                  isAdmin ? router.replace('/admin/login') : router.replace('/(voter)');
+                  router.replace('/(voter)');
                 } else {
                   isAdmin ? router.push('/admin/login') : router.push('/(candidate)/login');
                 }
               }}
             >
               <Text style={styles.authButtonText}>
-                {isSignedIn ? 'Sign Out' : 'Sign In'}
+                {showSignOut ? 'Sign Out' : 'Sign In'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -135,16 +162,20 @@ export function Header() {
             style={styles.mobileMenuItem}
             onPress={async () => {
               setMenuOpen(false);
-              if (isSignedIn) {
+              if (isAdminSignedIn) {
+                await getAdminStorage().removeItem(ADMIN_SESSION_KEY);
+                setIsAdminSignedIn(false);
+                router.replace('/admin/login');
+              } else if (isSignedIn) {
                 await supabase.auth.signOut();
-                isAdmin ? router.replace('/admin/login') : router.replace('/(voter)');
+                router.replace('/(voter)');
               } else {
                 isAdmin ? router.push('/admin/login') : router.push('/(candidate)/login');
               }
             }}
           >
             <Text style={styles.mobileMenuText}>
-              {isSignedIn ? 'Sign Out' : 'Sign In'}
+              {showSignOut ? 'Sign Out' : 'Sign In'}
             </Text>
           </TouchableOpacity>
         </View>
