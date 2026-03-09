@@ -26,6 +26,8 @@ export interface Candidate {
   profile_unlocked: boolean;
 }
 
+export type VideoType = 'overview' | 'issue' | 'endorsement';
+
 export interface Video {
   id: string;
   candidate_id: string;
@@ -37,6 +39,8 @@ export interface Video {
   submitted_at: string | null;
   approved_at: string | null;
   youtube_privacy: string | null;
+  video_type: VideoType;
+  title: string | null;
 }
 
 export interface Election {
