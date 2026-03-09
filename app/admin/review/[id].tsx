@@ -9,7 +9,7 @@ import { Colors } from '@/constants/Colors';
 import type { Video } from '@/lib/types';
 
 type VideoWithCandidate = Video & {
-  candidates: { name: string; office_sought: string; email: string; bio: string | null; city: string | null; state: string | null; party: string | null } | null;
+  candidates: { id: string; name: string; office_sought: string; email: string; bio: string | null; city: string | null; state: string | null; party: string | null } | null;
 };
 
 function StorageVideoPlayer({ url }: { url: string }) {
@@ -85,7 +85,7 @@ export default function ReviewVideoScreen() {
 
     supabaseAdmin
       .from('videos')
-      .select('*, candidates(name, office_sought, email, bio, city, state, party)')
+      .select('*, candidates(id, name, office_sought, email, bio, city, state, party)')
       .eq('id', id)
       .single()
       .then(async ({ data, error }) => {
@@ -206,12 +206,18 @@ export default function ReviewVideoScreen() {
               candidate_name: video.candidates?.name,
               status: 'approved' as const,
               youtube_url: updates.youtube_url as string,
+              video_type: video.video_type,
+              video_title: video.title,
+              profile_url: `https://1minutecandidate.com/(voter)/candidate/${video.candidates?.id}`,
             }
           : {
               candidate_email: video.candidates?.email,
               candidate_name: video.candidates?.name,
               status: 'rejected' as const,
               review_notes: reviewNotes.trim() || null,
+              video_type: video.video_type,
+              video_title: video.title,
+              profile_url: `https://1minutecandidate.com/(voter)/candidate/${video.candidates?.id}`,
             };
       const { error: notifyError } = await supabaseAdmin.functions.invoke('notify-candidate', {
         body: notifyBody,
