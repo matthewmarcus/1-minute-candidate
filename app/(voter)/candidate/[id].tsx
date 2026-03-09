@@ -5,7 +5,7 @@ import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
 import { supabase } from '@/lib/supabase';
-import { VideoPlayer } from '@/components/VideoPlayer';
+import { YouTubePlayer } from '@/components/YouTubePlayer';
 import { Header } from '@/components/Header';
 import { PageContainer } from '@/components/PageContainer';
 import { Colors } from '@/constants/Colors';
@@ -51,65 +51,6 @@ function ProfilePhoto({ photoUrl, name }: { photoUrl: string | null; name: strin
   );
 }
 
-function UnlistedVideoThumbnail({ videoId, youtubeUrl }: { videoId: string; youtubeUrl: string }) {
-  const { width } = useWindowDimensions();
-  const thumbWidth = Math.min(width, 680) - 40;
-  const thumbHeight = thumbWidth * (9 / 16);
-
-  if (Platform.OS === 'web') {
-    return (
-      // @ts-ignore — anchor is a valid web element
-      <a
-        href={youtubeUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{ display: 'block', position: 'relative', width: thumbWidth, height: thumbHeight, backgroundColor: '#000', textDecoration: 'none' }}
-      >
-        {/* @ts-ignore */}
-        <img
-          src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
-          alt="Video thumbnail"
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-        />
-        {/* @ts-ignore */}
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {/* @ts-ignore */}
-          <div style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {/* @ts-ignore */}
-            <div style={{ width: 0, height: 0, borderTop: '14px solid transparent', borderBottom: '14px solid transparent', borderLeft: '24px solid white', marginLeft: 6 }} />
-          </div>
-        </div>
-      </a>
-    );
-  }
-
-  return (
-    <TouchableOpacity
-      activeOpacity={0.85}
-      onPress={() => Linking.openURL(youtubeUrl)}
-      style={[styles.thumbnailContainer, { width: thumbWidth, height: thumbHeight }]}
-    >
-      <Image
-        source={{ uri: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` }}
-        style={[styles.thumbnailImage, { width: thumbWidth, height: thumbHeight }]}
-        resizeMode="cover"
-      />
-      <View style={styles.playOverlay}>
-        <View style={styles.playButton}>
-          <View style={styles.playTriangle} />
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-}
-
-function VideoEmbed({ video }: { video: Video }) {
-  if (!video.youtube_url || !video.youtube_video_id) return null;
-  if (video.youtube_privacy === 'public') {
-    return <VideoPlayer youtubeUrl={video.youtube_url} />;
-  }
-  return <UnlistedVideoThumbnail videoId={video.youtube_video_id} youtubeUrl={video.youtube_url} />;
-}
 
 function XLogoIcon({ size = 22, color = Colors.primary }: { size?: number; color?: string }) {
   return (
@@ -221,6 +162,9 @@ export default function CandidateProfileScreen() {
   const [candidate, setCandidate] = useState<Candidate | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
+  const { width } = useWindowDimensions();
+  const videoWidth = Math.min(width, 680) - 40;
+  const videoHeight = videoWidth * (9 / 16);
 
   useEffect(() => {
     if (!id) return;
@@ -265,12 +209,9 @@ export default function CandidateProfileScreen() {
       <Header />
       <PageContainer style={{ paddingHorizontal: 0 }}>
         {/* Overview video — centered within content column */}
-        {overviewVideo?.youtube_url && (
+        {overviewVideo?.youtube_url && overviewVideo.youtube_video_id && (
           <View style={styles.overviewVideoContainer}>
-            {overviewVideo.youtube_privacy === 'public'
-              ? <VideoPlayer youtubeUrl={overviewVideo.youtube_url} />
-              : <UnlistedVideoThumbnail videoId={overviewVideo.youtube_video_id!} youtubeUrl={overviewVideo.youtube_url} />
-            }
+            <YouTubePlayer videoId={overviewVideo.youtube_video_id} width={videoWidth} height={videoHeight} />
           </View>
         )}
 
@@ -331,7 +272,7 @@ export default function CandidateProfileScreen() {
                 {v.title ? (
                   <Text style={styles.videoCardTitle}>{v.title}</Text>
                 ) : null}
-                <VideoEmbed video={v} />
+                {v.youtube_video_id && <YouTubePlayer videoId={v.youtube_video_id} width={videoWidth} height={videoHeight} />}
                 {index < issueVideos.length - 1 && <View style={styles.videoDivider} />}
               </View>
             ))}
@@ -347,7 +288,7 @@ export default function CandidateProfileScreen() {
                 {v.title ? (
                   <Text style={styles.videoCardTitle}>{v.title}</Text>
                 ) : null}
-                <VideoEmbed video={v} />
+                {v.youtube_video_id && <YouTubePlayer videoId={v.youtube_video_id} width={videoWidth} height={videoHeight} />}
                 {index < endorsementVideos.length - 1 && <View style={styles.videoDivider} />}
               </View>
             ))}

@@ -18,7 +18,7 @@ import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
 import { Header } from '@/components/Header';
 import { PageContainer } from '@/components/PageContainer';
-import { VideoPlayer } from '@/components/VideoPlayer';
+import { YouTubePlayer } from '@/components/YouTubePlayer';
 import { countSlots } from '@/lib/videoSlots';
 import type { Candidate, Video } from '@/lib/types';
 
@@ -40,74 +40,6 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
-function VideoThumbnailWithPlay({ videoId, youtubeUrl }: { videoId: string; youtubeUrl: string }) {
-  const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
-
-  if (Platform.OS === 'web') {
-    return (
-      <View>
-        {/* @ts-ignore — anchor is a valid web element */}
-        <a
-          href={youtubeUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            display: 'block',
-            position: 'relative',
-            width: '100%',
-            height: 200,
-            backgroundColor: '#000',
-            textDecoration: 'none',
-            borderRadius: 8,
-            overflow: 'hidden',
-            marginBottom: 8,
-          }}
-        >
-          {/* @ts-ignore */}
-          <img
-            src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
-            alt="Video thumbnail"
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-          {/* @ts-ignore */}
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {/* @ts-ignore */}
-            <div style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {/* @ts-ignore */}
-              <div style={{ width: 0, height: 0, borderTop: '12px solid transparent', borderBottom: '12px solid transparent', borderLeft: '20px solid white', marginLeft: 5 }} />
-            </div>
-          </div>
-        </a>
-        {/* @ts-ignore */}
-        <a href={youtubeUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#0F1F5C', fontSize: 13, textDecoration: 'none', display: 'block', marginBottom: 12 }}>
-          Watch on YouTube →
-        </a>
-      </View>
-    );
-  }
-
-  return (
-    <View>
-      <TouchableOpacity
-        activeOpacity={0.85}
-        onPress={() => Linking.openURL(watchUrl)}
-        style={styles.thumbnailContainer}
-      >
-        <Image
-          source={{ uri: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` }}
-          style={styles.videoThumbnail}
-          resizeMode="cover"
-        />
-        <View style={styles.playOverlay}>
-          <Ionicons name="play-circle-outline" size={56} color="rgba(255,255,255,0.9)" />
-        </View>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={() => Linking.openURL(watchUrl)} style={{ marginTop: 8, marginBottom: 12 }}>
-        <Text style={styles.watchOnYouTube}>Watch on YouTube →</Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
 
 function StatusBadge({ status }: { status: string }) {
   const configs: Record<string, { bg: string; text: string; label: string }> = {
@@ -133,6 +65,10 @@ function SlotPill({ used, purchased }: { used: number; purchased: number }) {
 }
 
 function OverviewVideoSection({ video, profileUnlocked }: { video: Video | null; profileUnlocked: boolean }) {
+  const { width: windowWidth } = useWindowDimensions();
+  const videoWidth = Math.min(windowWidth, 680) - 40;
+  const videoHeight = videoWidth * (9 / 16);
+
   if (!profileUnlocked) {
     return (
       <View style={styles.subsection}>
@@ -176,9 +112,7 @@ function OverviewVideoSection({ video, profileUnlocked }: { video: Video | null;
         <StatusBadge status={video.status} />
       </View>
       {video.status === 'approved' && video.youtube_video_id && video.youtube_url && (
-        video.youtube_privacy === 'public'
-          ? <VideoPlayer youtubeUrl={video.youtube_url} />
-          : <VideoThumbnailWithPlay videoId={video.youtube_video_id} youtubeUrl={video.youtube_url} />
+        <YouTubePlayer videoId={video.youtube_video_id} width={videoWidth} height={videoHeight} />
       )}
       {(video.status === 'submitted' || video.status === 'under_review') && (
         <View style={styles.reviewState}>
@@ -206,7 +140,8 @@ function IssueVideosSection({
   const slots = countSlots(purchases, videos, 'issue');
   const [expandedVideoId, setExpandedVideoId] = useState<string | null>(null);
   const { width: windowWidth } = useWindowDimensions();
-  const cardWidth = Math.min(windowWidth, 680) - 40;
+  const videoWidth = Math.min(windowWidth, 680) - 40;
+  const videoHeight = videoWidth * (9 / 16);
 
   return (
     <View style={styles.subsection}>
@@ -249,7 +184,7 @@ function IssueVideosSection({
               </TouchableOpacity>
               {expandedVideoId === v.id && v.youtube_video_id && v.youtube_url && (
                 <View style={{ marginTop: 12 }}>
-                  <VideoThumbnailWithPlay videoId={v.youtube_video_id} youtubeUrl={v.youtube_url} />
+                  <YouTubePlayer videoId={v.youtube_video_id} width={videoWidth} height={videoHeight} />
                 </View>
               )}
             </View>
@@ -279,7 +214,8 @@ function EndorsementVideosSection({
   const slots = countSlots(purchases, videos, 'endorsement');
   const [expandedVideoId, setExpandedVideoId] = useState<string | null>(null);
   const { width: windowWidth } = useWindowDimensions();
-  const cardWidth = Math.min(windowWidth, 680) - 40;
+  const videoWidth = Math.min(windowWidth, 680) - 40;
+  const videoHeight = videoWidth * (9 / 16);
 
   return (
     <View style={styles.subsection}>
@@ -322,7 +258,7 @@ function EndorsementVideosSection({
               </TouchableOpacity>
               {expandedVideoId === v.id && v.youtube_video_id && v.youtube_url && (
                 <View style={{ marginTop: 12 }}>
-                  <VideoThumbnailWithPlay videoId={v.youtube_video_id} youtubeUrl={v.youtube_url} />
+                  <YouTubePlayer videoId={v.youtube_video_id} width={videoWidth} height={videoHeight} />
                 </View>
               )}
             </View>
