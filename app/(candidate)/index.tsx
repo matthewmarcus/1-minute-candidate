@@ -265,7 +265,7 @@ export default function CandidateDashboard() {
 
   return (
     <View style={styles.rootContainer}>
-      <Header />
+      <Header variant="candidate" />
       <CandidateNav activeTab="dashboard" />
 
       <PageContainer style={{ paddingTop: 8 }}>

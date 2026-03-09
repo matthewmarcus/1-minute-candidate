@@ -54,7 +54,7 @@ export default function RecordScreen() {
   if (Platform.OS === 'web') {
     return (
       <View style={styles.webContainer}>
-        <Header />
+        <Header variant="candidate" />
         <CandidateNav activeTab="record" />
         <PageContainer scrollable={false} style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <Text style={styles.webUnsupportedTitle}>Mobile Only</Text>
@@ -229,7 +229,7 @@ export default function RecordScreen() {
   if (recordingState === 'tips') {
     return (
       <View style={styles.tipsScreen}>
-        <Header />
+        <Header variant="candidate" />
         <CandidateNav activeTab="record" />
         <PageContainer style={{ paddingTop: 24 }}>
           <Text style={styles.tipsScreenTitle}>Before You Record</Text>

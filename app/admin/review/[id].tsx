@@ -254,7 +254,7 @@ export default function ReviewVideoScreen() {
 
   return (
     <View style={styles.outerContainer}>
-      <Header showBack onBack={() => router.replace('/admin')} />
+      <Header variant="admin" showBack onBack={() => router.replace('/admin')} />
       <PageContainer style={{ paddingHorizontal: 0 }}>
         {storageVideoUrl ? (
           <StorageVideoPlayer url={storageVideoUrl} />

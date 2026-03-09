@@ -7,7 +7,7 @@ import { Header } from '@/components/Header';
 export default function SubscribeScreen() {
   return (
     <View style={styles.outerContainer}>
-      <Header showBack onBack={() => router.back()} />
+      <Header variant="candidate" showBack onBack={() => router.back()} />
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Choose Your Plan</Text>
       <Text style={styles.subtitle}>

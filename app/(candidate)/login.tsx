@@ -47,7 +47,7 @@ export default function CandidateLogin() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <Header showBack onBack={() => router.replace('/(voter)')} />
+      <Header variant="candidate" showBack onBack={() => router.replace('/(voter)')} />
       <PageContainer style={{ paddingHorizontal: 0 }}>
         {/* ── Value proposition ── */}
         <View style={styles.valueProp}>

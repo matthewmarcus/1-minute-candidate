@@ -358,7 +358,7 @@ export default function CandidateProfile() {
       style={styles.rootContainer}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <Header />
+      <Header variant="candidate" />
       <CandidateNav activeTab="profile" />
 
       {toast && <Toast message={toast.message} type={toast.type} />}

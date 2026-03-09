@@ -68,7 +68,7 @@ export default function CandidateRegister() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <Header showBack onBack={() => router.replace('/(voter)')} />
+      <Header variant="candidate" showBack onBack={() => router.replace('/(voter)')} />
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Create Account</Text>
         <Text style={styles.subtitle}>Register as a candidate</Text>
