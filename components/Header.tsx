@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Platform, StatusBar } from 'react-native';
+import { useRouter, usePathname } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 
 export function Header() {
   const router = useRouter();
+  const pathname = usePathname();
   const [isSignedIn, setIsSignedIn] = useState(false);
+
+  const isAdmin = pathname.startsWith('/admin');
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -17,14 +20,16 @@ export function Header() {
     return () => subscription.unsubscribe();
   }, []);
 
+  const topPadding = Platform.OS === 'ios' ? 44 : (Platform.OS === 'android' ? StatusBar.currentHeight ?? 24 : 0);
+
   return (
-    <View style={styles.outer}>
+    <View style={[styles.outer, { paddingTop: topPadding }]}>
       <View style={styles.inner}>
 
         {/* Logo + Title — tappable, goes home */}
         <TouchableOpacity
           style={styles.logoRow}
-          onPress={() => router.push('/(voter)')}
+          onPress={() => isAdmin ? router.push('/admin') : router.push('/(voter)')}
           activeOpacity={0.8}
         >
           <Image
@@ -37,22 +42,33 @@ export function Header() {
 
         {/* Right nav */}
         <View style={styles.navRow}>
-          <TouchableOpacity
-            onPress={() => router.push('/(voter)/find')}
-            style={styles.navLink}
-          >
-            <Text style={styles.navText}>For Voters</Text>
-          </TouchableOpacity>
+          {isAdmin ? (
+            <TouchableOpacity
+              onPress={() => router.push('/admin')}
+              style={styles.navLink}
+            >
+              <Text style={styles.navText}>Admin Dashboard</Text>
+            </TouchableOpacity>
+          ) : (
+            <>
+              <TouchableOpacity
+                onPress={() => router.push('/(voter)/find')}
+                style={styles.navLink}
+              >
+                <Text style={styles.navText}>For Voters</Text>
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={() => isSignedIn
-              ? router.push('/dashboard')
-              : router.push('/(candidate)/login')
-            }
-            style={styles.navLink}
-          >
-            <Text style={styles.navText}>For Candidates</Text>
-          </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => isSignedIn
+                  ? router.push('/dashboard')
+                  : router.push('/(candidate)/login')
+                }
+                style={styles.navLink}
+              >
+                <Text style={styles.navText}>For Candidates</Text>
+              </TouchableOpacity>
+            </>
+          )}
 
           <TouchableOpacity
             style={styles.authButton}

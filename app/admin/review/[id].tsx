@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert, ActivityIndicator, Platform, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { VideoPlayer } from '@/components/VideoPlayer';
@@ -9,16 +9,17 @@ import { Colors } from '@/constants/Colors';
 import type { Video } from '@/lib/types';
 
 type VideoWithCandidate = Video & {
-  candidates: { name: string; office_sought: string; email: string } | null;
+  candidates: { name: string; office_sought: string; email: string; bio: string | null; city: string | null; state: string | null; party: string | null } | null;
 };
 
-const { width } = require('react-native').Dimensions.get('window');
-const PLAYER_HEIGHT = (width * 9) / 16;
-
 function StorageVideoPlayer({ url }: { url: string }) {
+  const { width } = useWindowDimensions();
+  const videoWidth = Math.min(width, 680) - 40;
+  const videoHeight = videoWidth * (9 / 16);
+
   if (Platform.OS === 'web') {
     return (
-      <View style={{ width: '100%', height: PLAYER_HEIGHT, backgroundColor: '#000' }}>
+      <View style={{ width: videoWidth, height: videoHeight, backgroundColor: '#000', alignSelf: 'center' }}>
         {/* @ts-ignore — video is a valid web element */}
         <video
           src={url}
@@ -34,10 +35,10 @@ function StorageVideoPlayer({ url }: { url: string }) {
   const { WebView } = require('react-native-webview');
   const html = `<html><body style="margin:0;background:#000"><video src="${url}" controls style="width:100%;height:100vh" playsinline></video></body></html>`;
   return (
-    <View style={{ width: '100%', height: PLAYER_HEIGHT, backgroundColor: '#000' }}>
+    <View style={{ width: videoWidth, height: videoHeight, backgroundColor: '#000', alignSelf: 'center' }}>
       <WebView
         source={{ html }}
-        style={{ flex: 1 }}
+        style={{ width: videoWidth, height: videoHeight }}
         allowsFullscreenVideo
         mediaPlaybackRequiresUserAction={false}
         javaScriptEnabled
@@ -84,7 +85,7 @@ export default function ReviewVideoScreen() {
 
     supabaseAdmin
       .from('videos')
-      .select('*, candidates(name, office_sought, email)')
+      .select('*, candidates(name, office_sought, email, bio, city, state, party)')
       .eq('id', id)
       .single()
       .then(async ({ data, error }) => {
@@ -147,6 +148,12 @@ export default function ReviewVideoScreen() {
               storage_path: video.storage_path,
               candidate_name: video.candidates?.name ?? 'Candidate',
               office_sought: video.candidates?.office_sought ?? '',
+              video_type: video.video_type ?? 'overview',
+              video_title: video.title ?? '',
+              bio: video.candidates?.bio ?? '',
+              city: video.candidates?.city ?? '',
+              state: video.candidates?.state ?? '',
+              party: video.candidates?.party ?? '',
             },
           },
         );
