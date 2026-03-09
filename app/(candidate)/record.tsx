@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, Platform } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
 import { Video, ResizeMode } from 'expo-av';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUnlockScreenOrientation, useIsLandscape } from '@/hooks/useScreenOrientation';
 import { supabase } from '@/lib/supabase';
@@ -14,6 +14,7 @@ import { PageContainer } from '@/components/PageContainer';
 import { MAX_RECORDING_SECONDS } from '@/constants/Config';
 
 type RecordingState = 'tips' | 'idle' | 'recording' | 'preview';
+type VideoType = 'overview' | 'issue' | 'endorsement';
 
 function formatDuration(secs: number): string {
   const m = Math.floor(secs / 60);
@@ -33,14 +34,19 @@ const TIPS = [
 
 export default function RecordScreen() {
   const { session } = useAuth();
+  const params = useLocalSearchParams<{ video_type?: string }>();
+  const videoType: VideoType = (params.video_type as VideoType) ?? 'overview';
+
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [microphonePermission, requestMicrophonePermission] = useMicrophonePermissions();
   const cameraRef = useRef<CameraView>(null);
+  const webFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [facing, setFacing] = useState<CameraType>('front');
   const [recordingState, setRecordingState] = useState<RecordingState>('tips');
   const [secondsLeft, setSecondsLeft] = useState(MAX_RECORDING_SECONDS);
   const [videoUri, setVideoUri] = useState<string | null>(null);
+  const [videoFilename, setVideoFilename] = useState<string | null>(null);
   const [videoDurationSecs, setVideoDurationSecs] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -50,13 +56,116 @@ export default function RecordScreen() {
   const isLandscape = useIsLandscape();
   const insets = useSafeAreaInsets();
 
+  // --- Endorsement upload flow (web) ---
+  if (Platform.OS === 'web' && videoType === 'endorsement') {
+    const handleWebFileChange = (e: any) => {
+      const file = e.target?.files?.[0];
+      if (!file) return;
+      setVideoFilename(file.name);
+      const url = URL.createObjectURL(file);
+      setVideoUri(url);
+    };
+
+    return (
+      <View style={styles.webContainer}>
+        <Header variant="candidate" />
+        <CandidateNav activeTab="record" />
+        <PageContainer style={{ paddingTop: 24 }}>
+          <Text style={styles.webUploadTitle}>Upload Endorsement Video</Text>
+          <Text style={styles.webUploadInstructions}>
+            Select a video file from your device (max 60 seconds, MP4 or MOV recommended).
+          </Text>
+
+          {/* Hidden file input */}
+          {/* @ts-ignore */}
+          <input
+            ref={webFileInputRef}
+            type="file"
+            accept="video/*"
+            style={{ display: 'none' }}
+            onChange={handleWebFileChange}
+          />
+
+          {videoUri ? (
+            <View style={styles.uploadSelectedContainer}>
+              <Text style={styles.uploadFilename}>{videoFilename ?? 'Selected file'}</Text>
+              <TouchableOpacity
+                style={[styles.button, submitting && styles.buttonDisabled]}
+                onPress={async () => {
+                  if (!videoUri || !session?.user) return;
+                  setSubmitting(true);
+                  const resp = await fetch(videoUri);
+                  const blob = await resp.blob();
+                  const arrayBuffer = await blob.arrayBuffer();
+                  const bytes = new Uint8Array(arrayBuffer);
+                  const candidateId = session.user.id;
+                  const filename = `${Date.now()}.mp4`;
+                  const storagePath = `${candidateId}/${filename}`;
+                  const uploadResponse = await supabase.storage
+                    .from('candidate-videos')
+                    .upload(storagePath, bytes, { contentType: blob.type || 'video/mp4', upsert: false });
+                  if (uploadResponse.error) {
+                    setSubmitting(false);
+                    Alert.alert('Upload Failed', uploadResponse.error.message);
+                    return;
+                  }
+                  const { error } = await supabase.from('videos').insert({
+                    candidate_id: candidateId,
+                    status: 'submitted',
+                    submitted_at: new Date().toISOString(),
+                    storage_path: storagePath,
+                    video_type: 'endorsement',
+                  });
+                  setSubmitting(false);
+                  if (error) {
+                    Alert.alert('Submission Failed', error.message);
+                    return;
+                  }
+                  Alert.alert(
+                    'Video Submitted',
+                    'Your endorsement video has been submitted for review.',
+                    [{ text: 'OK', onPress: () => router.replace('/(candidate)') }]
+                  );
+                }}
+                disabled={submitting}
+              >
+                <Text style={styles.buttonText}>{submitting ? 'Uploading...' : 'Upload Video'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.buttonSecondary, { marginTop: 8 }]}
+                onPress={() => { setVideoUri(null); setVideoFilename(null); }}
+                disabled={submitting}
+              >
+                <Text style={styles.buttonTextSecondary}>Choose a Different File</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => webFileInputRef.current?.click()}
+            >
+              <Text style={styles.buttonText}>Choose Video File</Text>
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity
+            style={[styles.button, styles.buttonCancel, { marginTop: 12 }]}
+            onPress={() => router.replace('/(candidate)')}
+          >
+            <Text style={styles.buttonCancelText}>Cancel</Text>
+          </TouchableOpacity>
+        </PageContainer>
+      </View>
+    );
+  }
+
   // Web does not support native camera or file system modules — show a fallback.
   if (Platform.OS === 'web') {
     return (
       <View style={styles.webContainer}>
         <Header variant="candidate" />
         <CandidateNav activeTab="record" />
-        <PageContainer scrollable={false} style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <View style={styles.webFallbackCenter}>
           <Text style={styles.webUnsupportedTitle}>Mobile Only</Text>
           <Text style={styles.webUnsupportedText}>
             Video recording is only available on the mobile app. Download the app to record and submit your candidate video.
@@ -64,10 +173,29 @@ export default function RecordScreen() {
           <TouchableOpacity style={styles.button} onPress={() => router.replace('/(candidate)')}>
             <Text style={styles.buttonText}>Go Back</Text>
           </TouchableOpacity>
-        </PageContainer>
+        </View>
       </View>
     );
   }
+
+  // Mobile endorsement upload flow
+  const handleMobilePickEndorsement = useCallback(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const ImagePicker = require('expo-image-picker');
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['videos'],
+      allowsEditing: false,
+      quality: 1,
+    });
+    if (result.canceled || !result.assets?.[0]) return;
+    const asset = result.assets[0];
+    setVideoUri(asset.uri);
+    setVideoFilename(asset.fileName ?? asset.uri.split('/').pop() ?? 'video');
+    if (asset.duration != null) {
+      setVideoDurationSecs(Math.round(asset.duration / 1000));
+    }
+    setRecordingState('preview');
+  }, []);
 
   const handleCancel = useCallback(() => {
     if (countdownRef.current) {
@@ -224,6 +352,98 @@ export default function RecordScreen() {
       ]
     );
   }, [submitVideo]);
+
+  // --- Endorsement upload screen (mobile, non-preview state) ---
+  if (videoType === 'endorsement' && recordingState !== 'preview') {
+    return (
+      <View style={styles.tipsScreen}>
+        <Header variant="candidate" />
+        <CandidateNav activeTab="record" />
+        <PageContainer style={{ paddingTop: 24 }}>
+          <Text style={styles.tipsScreenTitle}>Upload Endorsement Video</Text>
+          <Text style={styles.webUploadInstructions}>
+            Select a video file from your device (max 60 seconds, MP4 or MOV recommended).
+          </Text>
+
+          {videoUri ? (
+            <View style={styles.uploadSelectedContainer}>
+              <Text style={styles.uploadFilename}>{videoFilename ?? 'Selected file'}</Text>
+              {videoDurationSecs !== null && (
+                <Text style={styles.uploadDuration}>Duration: {formatDuration(videoDurationSecs)}</Text>
+              )}
+              <TouchableOpacity
+                style={[styles.readyButton, submitting && styles.buttonDisabled]}
+                onPress={async () => {
+                  if (!videoUri || !session?.user) return;
+                  setSubmitting(true);
+                  const candidateId = session.user.id;
+                  const filename = `${Date.now()}.mov`;
+                  const storagePath = `${candidateId}/${filename}`;
+                  // eslint-disable-next-line @typescript-eslint/no-require-imports
+                  const FileSystem = require('expo-file-system');
+                  const base64 = await FileSystem.readAsStringAsync(videoUri, {
+                    encoding: FileSystem.EncodingType.Base64,
+                  });
+                  const binaryString = atob(base64);
+                  const bytes = new Uint8Array(binaryString.length);
+                  for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                  }
+                  const uploadResponse = await supabase.storage
+                    .from('candidate-videos')
+                    .upload(storagePath, bytes, { contentType: 'video/quicktime', upsert: false });
+                  if (uploadResponse.error) {
+                    setSubmitting(false);
+                    Alert.alert('Upload Failed', uploadResponse.error.message);
+                    return;
+                  }
+                  const { error } = await supabase.from('videos').insert({
+                    candidate_id: candidateId,
+                    status: 'submitted',
+                    submitted_at: new Date().toISOString(),
+                    storage_path: storagePath,
+                    video_type: 'endorsement',
+                  });
+                  setSubmitting(false);
+                  if (error) {
+                    Alert.alert('Submission Failed', error.message);
+                    return;
+                  }
+                  Alert.alert(
+                    'Video Submitted',
+                    'Your endorsement video has been submitted for review.',
+                    [{ text: 'OK', onPress: () => router.replace('/(candidate)') }]
+                  );
+                }}
+                disabled={submitting}
+              >
+                <Text style={styles.readyButtonText}>{submitting ? 'Uploading...' : 'Upload Video'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.cancelButtonOutline}
+                onPress={() => { setVideoUri(null); setVideoFilename(null); setVideoDurationSecs(null); }}
+                disabled={submitting}
+              >
+                <Text style={styles.cancelButtonOutlineText}>Choose a Different File</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity style={styles.readyButton} onPress={handleMobilePickEndorsement}>
+              <Text style={styles.readyButtonText}>Choose Video File</Text>
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity
+            style={[styles.cancelButtonOutline, { marginTop: 12 }]}
+            onPress={() => router.replace('/(candidate)')}
+            disabled={submitting}
+          >
+            <Text style={styles.cancelButtonOutlineText}>Cancel</Text>
+          </TouchableOpacity>
+        </PageContainer>
+      </View>
+    );
+  }
 
   // --- Tips screen (shown before camera opens) ---
   if (recordingState === 'tips') {
@@ -437,6 +657,48 @@ const styles = StyleSheet.create({
   webContainer: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  webFallbackCenter: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+
+  // --- Upload flow ---
+  webUploadTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: Colors.text,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  webUploadInstructions: {
+    fontSize: 15,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 28,
+  },
+  uploadSelectedContainer: {
+    gap: 12,
+    marginBottom: 12,
+  },
+  uploadFilename: {
+    fontSize: 14,
+    color: Colors.text,
+    fontWeight: '600',
+    textAlign: 'center',
+    backgroundColor: Colors.card,
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  uploadDuration: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
   },
 
   // --- Tips screen ---

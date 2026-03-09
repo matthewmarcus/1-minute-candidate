@@ -8,6 +8,7 @@ import {
   Platform,
   ActivityIndicator,
   Linking,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -20,6 +21,14 @@ import { PageContainer } from '@/components/PageContainer';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import type { Candidate, Video } from '@/lib/types';
 
+type RaceLevel = 'local' | 'state' | 'national';
+
+const VIDEO_PRICES: Record<RaceLevel, number> = {
+  local: 29,
+  state: 49,
+  national: 99,
+};
+
 function getInitials(name: string): string {
   return name
     .split(' ')
@@ -30,17 +39,6 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
-
-function SubscriptionBadge({ status }: { status: string }) {
-  const isActive = status === 'active';
-  return (
-    <View style={[styles.badge, isActive ? styles.badgeActive : styles.badgeInactive]}>
-      <Text style={[styles.badgeText, isActive ? styles.badgeTextActive : styles.badgeTextInactive]}>
-        {isActive ? 'Active' : 'Inactive'}
-      </Text>
-    </View>
-  );
-}
 
 // Thumbnail with play button overlay — tapping opens YouTube via Linking
 function VideoThumbnailWithPlay({ videoId, youtubeUrl }: { videoId: string; youtubeUrl: string }) {
@@ -253,6 +251,7 @@ export default function CandidateDashboard() {
   const [profile, setProfile] = useState<Partial<Candidate> | null>(null);
   const [video, setVideo] = useState<Video | null | undefined>(undefined); // undefined = loading
   const [loading, setLoading] = useState(true);
+  const [purchasing, setPurchasing] = useState(false);
 
   useEffect(() => {
     if (!session?.user) return;
@@ -281,6 +280,34 @@ export default function CandidateDashboard() {
     load();
   }, [session]);
 
+  async function handlePurchase(product_type: string) {
+    setPurchasing(true);
+    try {
+      const appUrl =
+        Platform.OS === 'web'
+          ? (typeof window !== 'undefined' ? window.location.origin : 'https://1minutecandidate.com')
+          : 'https://1minutecandidate.com';
+
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: {
+          product_type,
+          success_url: `${appUrl}/(candidate)/payment-success`,
+          cancel_url: `${appUrl}/(candidate)/subscribe`,
+        },
+      });
+
+      if (error) throw error;
+      if (!data?.url) throw new Error('No checkout URL returned');
+
+      await Linking.openURL(data.url);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Something went wrong';
+      Alert.alert('Error', `Could not start checkout: ${message}`);
+    } finally {
+      setPurchasing(false);
+    }
+  }
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -292,7 +319,9 @@ export default function CandidateDashboard() {
   const name = profile?.name ?? session?.user?.email ?? 'Candidate';
   const office = profile?.office_sought ?? '';
   const party = profile?.party ?? '';
-  const subStatus = profile?.subscription_status ?? 'inactive';
+  const profileUnlocked = profile?.profile_unlocked ?? false;
+  const raceLevel = (profile?.race_level as RaceLevel) ?? 'local';
+  const videoPrice = VIDEO_PRICES[raceLevel];
 
   return (
     <View style={styles.rootContainer}>
@@ -321,33 +350,58 @@ export default function CandidateDashboard() {
           </View>
         </View>
 
-        {/* Subscription / Status card */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <View>
-              <Text style={styles.cardTitle}>Subscription</Text>
-              {office && (
-                <Text style={styles.statusOffice}>{office}</Text>
-              )}
-            </View>
-            <SubscriptionBadge status={subStatus} />
-          </View>
-          {subStatus !== 'active' && (
-            <TouchableOpacity
-              style={styles.outlineButton}
-              onPress={() => router.push('/(candidate)/subscribe')}
-            >
-              <Text style={styles.outlineButtonText}>Activate Subscription</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
         {/* Video card */}
         <VideoCard
           video={video === undefined ? null : video}
           onRecord={() => router.push('/(candidate)/record')}
-          profileUnlocked={profile?.profile_unlocked ?? false}
+          profileUnlocked={profileUnlocked}
         />
+
+        {/* Add More Videos — only shown when profile is unlocked */}
+        {profileUnlocked && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Add More Videos</Text>
+            <View style={styles.addVideosRow}>
+              {/* Issue Video card */}
+              <View style={styles.addVideoCard}>
+                <Ionicons name="mic-outline" size={28} color={Colors.primary} style={styles.addVideoIcon} />
+                <Text style={styles.addVideoTitle}>Issue Video</Text>
+                <Text style={styles.addVideoDescription}>
+                  Record a 60-second video on a policy issue.
+                </Text>
+                <TouchableOpacity
+                  style={[styles.addVideoButton, purchasing && styles.buttonDisabled]}
+                  onPress={() => handlePurchase('issue_video')}
+                  disabled={purchasing}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.addVideoButtonText}>
+                    {purchasing ? 'Loading...' : `Add — $${videoPrice}`}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Endorsement Video card */}
+              <View style={styles.addVideoCard}>
+                <Ionicons name="people-outline" size={28} color={Colors.primary} style={styles.addVideoIcon} />
+                <Text style={styles.addVideoTitle}>Endorsement Video</Text>
+                <Text style={styles.addVideoDescription}>
+                  Upload a video endorsement from a supporter.
+                </Text>
+                <TouchableOpacity
+                  style={[styles.addVideoButton, purchasing && styles.buttonDisabled]}
+                  onPress={() => handlePurchase('endorsement_video')}
+                  disabled={purchasing}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.addVideoButtonText}>
+                    {purchasing ? 'Loading...' : `Add — $${videoPrice}`}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
 
         {/* Profile completeness */}
         {profile && <ProfileCompletenessCard profile={profile} hasVideo={!!video} />}
@@ -449,35 +503,57 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
 
-  // Subscription card
-  statusOffice: {
+  // Add More Videos section
+  addVideosRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 12,
+  },
+  addVideoCard: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    borderRadius: 10,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+  },
+  addVideoIcon: {
+    marginBottom: 8,
+  },
+  addVideoTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.text,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  addVideoDescription: {
     fontSize: 12,
     color: Colors.textSecondary,
-    marginTop: 2,
+    textAlign: 'center',
+    lineHeight: 17,
+    marginBottom: 12,
+    flex: 1,
   },
-
-  // Badges
-  badge: {
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+  addVideoButton: {
+    borderRadius: 8,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+    alignItems: 'center',
+    alignSelf: 'stretch',
   },
-  badgeActive: {
-    backgroundColor: '#d1fae5',
-  },
-  badgeInactive: {
-    backgroundColor: '#f3f4f6',
-  },
-  badgeText: {
-    fontSize: 12,
+  addVideoButtonText: {
+    color: Colors.primary,
+    fontSize: 13,
     fontWeight: '600',
   },
-  badgeTextActive: {
-    color: '#065f46',
+  buttonDisabled: {
+    opacity: 0.6,
   },
-  badgeTextInactive: {
-    color: Colors.textSecondary,
-  },
+
   badgeLive: {
     backgroundColor: '#d1fae5',
     borderRadius: 20,
