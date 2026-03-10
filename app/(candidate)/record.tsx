@@ -94,13 +94,22 @@ export default function RecordScreen() {
       const videos = videosResult.data ?? [];
 
       if (videoType === 'overview') {
-        const { remaining } = countOverviewSlots(purchases, videos);
-        if (remaining === 0) {
+        const hasInFlightOverview = videos.some(
+          v => v.video_type === 'overview' && (v.status === 'submitted' || v.status === 'under_review')
+        );
+        if (hasInFlightOverview) {
           setSlotsError(
-            "You've used your overview video slot. Purchase a new slot from the Billing screen to re-record."
+            "Your overview video is currently under review. You can record a new one once it's resolved."
           );
         } else {
-          setSlotsError(null);
+          const { remaining } = countOverviewSlots(purchases, videos);
+          if (remaining === 0) {
+            setSlotsError(
+              "You've used your overview video slot. Purchase a new slot from the Billing screen to re-record."
+            );
+          } else {
+            setSlotsError(null);
+          }
         }
       } else {
         const slots = countSlots(purchases, videos, videoType as 'issue' | 'endorsement');
