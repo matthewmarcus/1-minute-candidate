@@ -88,7 +88,7 @@ export default function ReviewVideoScreen() {
 
     supabaseAdmin
       .from('videos')
-      .select('*, candidates(id, name, office_sought, email, bio, city, state, party)')
+      .select('*, candidates(id, name, office_sought, email, bio, city, state, party, slug)')
       .eq('id', id)
       .single()
       .then(async ({ data, error }) => {
@@ -157,6 +157,7 @@ export default function ReviewVideoScreen() {
               city: video.candidates?.city ?? '',
               state: video.candidates?.state ?? '',
               party: video.candidates?.party ?? '',
+              slug: video.candidates?.slug ?? '',
             },
           },
         );
