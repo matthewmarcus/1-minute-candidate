@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert, ActivityIndicator, Platform, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
@@ -47,25 +47,6 @@ function StorageVideoPlayer({ url }: { url: string }) {
   );
 }
 
-async function cleanupStorage(storagePath: string, videoId: string): Promise<void> {
-  const { error: storageError } = await supabaseAdmin.storage
-    .from('candidate-videos')
-    .remove([storagePath]);
-
-  if (storageError) {
-    console.error('[Storage] Failed to delete video file:', storageError.message);
-    return;
-  }
-
-  const { error: updateError } = await supabaseAdmin
-    .from('videos')
-    .update({ storage_path: null })
-    .eq('id', videoId);
-
-  if (updateError) {
-    console.error('[Storage] Failed to clear storage_path on video record:', updateError.message);
-  }
-}
 
 export default function ReviewVideoScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -76,39 +57,47 @@ export default function ReviewVideoScreen() {
   const [reviewNotes, setReviewNotes] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [uploadStep, setUploadStep] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [storageVideoUrl, setStorageVideoUrl] = useState<string | null>(null);
   const [showRejectNotes, setShowRejectNotes] = useState(false);
   const [rejectNotesError, setRejectNotesError] = useState<string | null>(null);
   const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
+  const fetchVideo = useCallback(async () => {
     if (!id) return;
-
-    supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from('videos')
       .select('*, candidates(id, name, office_sought, email, bio, city, state, party, slug)')
       .eq('id', id)
-      .single()
-      .then(async ({ data, error }) => {
-        if (!error && data) {
-          setVideo(data as VideoWithCandidate);
-          setReviewNotes(data.review_notes ?? '');
+      .single();
+    if (!error && data) {
+      setVideo(data as VideoWithCandidate);
+      setReviewNotes((prev) => prev || (data.review_notes ?? ''));
 
-          // Generate a signed URL for the storage video if available
-          if (data.storage_path) {
-            const { data: signedData } = await supabaseAdmin.storage
-              .from('candidate-videos')
-              .createSignedUrl(data.storage_path, 3600); // 1 hour expiry
-            if (signedData?.signedUrl) {
-              setStorageVideoUrl(signedData.signedUrl);
-            }
-          }
+      if (data.storage_path) {
+        const { data: signedData } = await supabaseAdmin.storage
+          .from('candidate-videos')
+          .createSignedUrl(data.storage_path, 3600);
+        if (signedData?.signedUrl) {
+          setStorageVideoUrl(signedData.signedUrl);
         }
-        setLoading(false);
-      });
+      }
+    }
+    setLoading(false);
   }, [id]);
+
+  useEffect(() => {
+    fetchVideo();
+  }, [fetchVideo]);
+
+  // Poll every 10 seconds while the video is approved but youtube_url is still pending
+  useEffect(() => {
+    if (!video || video.status !== 'approved' || video.youtube_url) return;
+    const interval = setInterval(() => {
+      fetchVideo();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [video, fetchVideo]);
 
   function handleRejectPress() {
     if (!showRejectNotes) {
@@ -136,7 +125,6 @@ export default function ReviewVideoScreen() {
     if (!video) return;
 
     setSubmitting(true);
-    setUploadStep(null);
 
     try {
       const updates: Record<string, unknown> = {
@@ -145,46 +133,20 @@ export default function ReviewVideoScreen() {
       };
 
       if (status === 'approved') {
-        if (!video.storage_path) {
-          throw new Error('This video has no storage path — cannot upload to YouTube.');
-        }
+        updates.approved_at = new Date().toISOString();
 
-        // Upload via server-side Edge Function so OAuth credentials stay secret.
-        setUploadStep('Uploading to YouTube…');
-        const { data: fnData, error: fnError } = await supabaseAdmin.functions.invoke(
-          'upload-to-youtube',
-          {
-            body: {
-              storage_path: video.storage_path,
-              candidate_name: video.candidates?.name ?? 'Candidate',
-              office_sought: video.candidates?.office_sought ?? '',
-              video_type: video.video_type ?? 'overview',
-              video_title: video.title ?? '',
-              bio: video.candidates?.bio ?? '',
-              city: video.candidates?.city ?? '',
-              state: video.candidates?.state ?? '',
-              party: video.candidates?.party ?? '',
-              slug: video.candidates?.slug ?? '',
-            },
-          },
-        );
+        // Trigger the async watermark → YouTube upload pipeline on the VPS.
+        // The Edge Function fetches all required data server-side from video_id.
+        const { error: fnError } = await supabaseAdmin.functions.invoke('trigger-watermark', {
+          body: { video_id: video.id },
+        });
 
         if (fnError) {
-          throw new Error(fnError.message ?? 'Edge Function error during YouTube upload.');
+          throw new Error(fnError.message ?? 'Failed to trigger watermark pipeline.');
         }
-
-        if (!fnData?.youtube_video_id) {
-          throw new Error(fnData?.error ?? 'YouTube upload failed — no video ID returned.');
-        }
-
-        updates.youtube_video_id = fnData.youtube_video_id;
-        updates.youtube_url = fnData.youtube_url;
-        updates.youtube_privacy = fnData.youtube_privacy ?? 'unlisted';
-        updates.approved_at = new Date().toISOString();
       }
 
-      // Step 3: persist video status update.
-      setUploadStep('Saving…');
+      // Persist the status update.
       const { error } = await supabaseAdmin
         .from('videos')
         .update(updates)
@@ -201,22 +163,14 @@ export default function ReviewVideoScreen() {
         if (candidateError) throw new Error(candidateError.message);
       }
 
-      // Best-effort: delete the raw file from storage now that it's on YouTube.
-      if (video.storage_path) {
-        setUploadStep('Cleaning up…');
-        await cleanupStorage(video.storage_path, video.id);
-      }
-
       // Best-effort: notify the candidate by email. Errors are logged but do
       // not block the approve/reject action from completing.
-      setUploadStep('Notifying candidate…');
       const notifyBody =
         status === 'approved'
           ? {
               candidate_email: video.candidates?.email,
               candidate_name: video.candidates?.name,
               status: 'approved' as const,
-              youtube_url: updates.youtube_url as string,
               video_type: video.video_type,
               video_title: video.title,
               profile_url: `https://1minutecandidate.com/(voter)/candidate/${video.candidates?.id}`,
@@ -239,18 +193,17 @@ export default function ReviewVideoScreen() {
 
       const message =
         status === 'approved'
-          ? 'Video approved and uploaded to YouTube — candidate profile is now live.'
+          ? 'Video approved. Watermarking and YouTube upload are processing in the background — this may take a few minutes.'
           : 'Video rejected — candidate has been notified.';
       setSuccessMessage(message);
       navTimerRef.current = setTimeout(() => {
         router.replace({ pathname: '/admin' });
-      }, 2500);
+      }, 4000);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'An unexpected error occurred.';
       Alert.alert('Error', message);
     } finally {
       setSubmitting(false);
-      setUploadStep(null);
     }
   }
 
@@ -293,6 +246,17 @@ export default function ReviewVideoScreen() {
         <Text style={styles.submittedText}>
           Submitted: {video.submitted_at ? new Date(video.submitted_at).toLocaleString() : 'N/A'}
         </Text>
+        {video.status === 'approved' && !video.youtube_url && (
+          <View style={styles.processingBadge}>
+            <ActivityIndicator size="small" color={Colors.warning} style={{ marginRight: 6 }} />
+            <Text style={styles.processingBadgeText}>Processing… YouTube upload in progress</Text>
+          </View>
+        )}
+        {video.status === 'approved' && video.youtube_url && (
+          <Text style={styles.youtubeLinkText}>
+            YouTube: {video.youtube_url}
+          </Text>
+        )}
       </View>
 
       {showRejectNotes && (
@@ -327,7 +291,6 @@ export default function ReviewVideoScreen() {
       ) : submitting ? (
         <View style={styles.actionStatus}>
           <ActivityIndicator size="large" color={Colors.primary} />
-          {uploadStep && <Text style={styles.uploadStepText}>{uploadStep}</Text>}
         </View>
       ) : (
         <View style={styles.actions}>
@@ -421,6 +384,26 @@ const styles = StyleSheet.create({
   submittedText: {
     fontSize: 12,
     color: Colors.textSecondary,
+  },
+  processingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    backgroundColor: Colors.warning + '20',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    alignSelf: 'flex-start',
+  },
+  processingBadgeText: {
+    fontSize: 12,
+    color: Colors.warning,
+    fontWeight: '600',
+  },
+  youtubeLinkText: {
+    fontSize: 12,
+    color: Colors.primary,
+    marginTop: 8,
   },
   reviewSection: {
     padding: 24,
@@ -532,11 +515,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
     padding: 24,
-  },
-  uploadStepText: {
-    fontSize: 15,
-    color: Colors.textSecondary,
-    fontWeight: '500',
   },
   successBanner: {
     margin: 24,
