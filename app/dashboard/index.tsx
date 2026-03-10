@@ -69,11 +69,13 @@ function OverviewVideoSection({
   video,
   profileUnlocked,
   overviewRemaining,
+  hasInFlightOverview,
   raceLevel,
 }: {
   video: Video | null;
   profileUnlocked: boolean;
   overviewRemaining: number;
+  hasInFlightOverview: boolean;
   raceLevel: RaceLevel;
 }) {
   const { width: windowWidth } = useWindowDimensions();
@@ -128,6 +130,20 @@ function OverviewVideoSection({
         </View>
       );
     }
+    if (hasInFlightOverview) {
+      return (
+        <View style={styles.subsection}>
+          <Text style={styles.subsectionTitle}>Overview Video</Text>
+          <View style={[styles.lockCtaContainer, { marginTop: 8, borderWidth: 1, borderColor: Colors.border, borderRadius: 10, padding: 14 }]}>
+            <Ionicons name="time-outline" size={22} color={Colors.textSecondary} style={styles.lockIcon} />
+            <Text style={[styles.subsectionTitle, { marginBottom: 4 }]}>Overview video under review</Text>
+            <Text style={[styles.lockBody, { marginBottom: 0 }]}>
+              You can submit a new overview once your current submission is approved or rejected.
+            </Text>
+          </View>
+        </View>
+      );
+    }
     return (
       <View style={styles.subsection}>
         <Text style={styles.subsectionTitle}>Overview Video</Text>
@@ -142,7 +158,10 @@ function OverviewVideoSection({
     );
   }
 
-  const showLocked = overviewRemaining === 0;
+  const lockReason: 'no-slots' | 'in-flight' | null =
+    overviewRemaining === 0 ? 'no-slots' :
+    hasInFlightOverview ? 'in-flight' :
+    null;
 
   return (
     <View style={styles.subsection}>
@@ -159,7 +178,7 @@ function OverviewVideoSection({
           <Text style={styles.reviewTitle}>Under review — we'll email you when it's approved.</Text>
         </View>
       )}
-      {showLocked ? (
+      {lockReason === 'no-slots' ? (
         <View style={[styles.lockCtaContainer, { marginTop: 8, borderWidth: 1, borderColor: Colors.border, borderRadius: 10, padding: 14 }]}>
           <Ionicons name="lock-closed-outline" size={22} color={Colors.textSecondary} style={styles.lockIcon} />
           <Text style={[styles.subsectionTitle, { marginBottom: 4 }]}>Want to update your overview video?</Text>
@@ -171,6 +190,14 @@ function OverviewVideoSection({
           >
             <Text style={styles.ctaButtonText}>Update Overview — ${rerecordPrice}</Text>
           </TouchableOpacity>
+        </View>
+      ) : lockReason === 'in-flight' ? (
+        <View style={[styles.lockCtaContainer, { marginTop: 8, borderWidth: 1, borderColor: Colors.border, borderRadius: 10, padding: 14 }]}>
+          <Ionicons name="time-outline" size={22} color={Colors.textSecondary} style={styles.lockIcon} />
+          <Text style={[styles.subsectionTitle, { marginBottom: 4 }]}>Overview video under review</Text>
+          <Text style={[styles.lockBody, { marginBottom: 0 }]}>
+            You can submit a new overview once your current submission is approved or rejected.
+          </Text>
         </View>
       ) : (
         <TouchableOpacity
@@ -506,6 +533,9 @@ export default function CandidateDashboard() {
   const videoPrice = VIDEO_PRICES[raceLevel];
 
   const overviewSlots = countOverviewSlots(purchases, videos);
+  const hasInFlightOverview = videos.some(
+    v => v.video_type === 'overview' && (v.status === 'submitted' || v.status === 'under_review')
+  );
   const overviewVideo =
     videos.find(v => v.video_type === 'overview' && ['submitted', 'under_review', 'approved'].includes(v.status)) ??
     videos.find(v => v.video_type === 'overview') ??
@@ -547,6 +577,7 @@ export default function CandidateDashboard() {
             video={overviewVideo}
             profileUnlocked={profileUnlocked}
             overviewRemaining={overviewSlots.remaining}
+            hasInFlightOverview={hasInFlightOverview}
             raceLevel={raceLevel}
           />
 
