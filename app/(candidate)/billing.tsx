@@ -12,6 +12,7 @@ import {
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Linking } from 'react-native';
+import * as ExpoLinking from 'expo-linking';
 import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
 import { Header } from '@/components/Header';
@@ -121,17 +122,22 @@ export default function SubscribeScreen() {
   async function handlePurchase(product_type: string, quantity: number = 1) {
     setPurchasing(true);
     try {
-      const appUrl =
+      const successUrl =
         Platform.OS === 'web'
-          ? (typeof window !== 'undefined' ? window.location.origin : 'https://1minutecandidate.com')
-          : 'https://1minutecandidate.com';
+          ? `${typeof window !== 'undefined' ? window.location.origin : 'https://1minutecandidate.com'}/(candidate)/payment-success`
+          : ExpoLinking.createURL('/payment-success');
+
+      const cancelUrl =
+        Platform.OS === 'web'
+          ? `${typeof window !== 'undefined' ? window.location.origin : 'https://1minutecandidate.com'}/(candidate)/billing`
+          : ExpoLinking.createURL('/billing');
 
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: {
           product_type,
           quantity,
-          success_url: `${appUrl}/(candidate)/payment-success`,
-          cancel_url: `${appUrl}/(candidate)/billing`,
+          success_url: successUrl,
+          cancel_url: cancelUrl,
         },
       });
 
