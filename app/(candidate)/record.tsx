@@ -39,7 +39,7 @@ function getScreenTitle(videoType: VideoType): string {
 }
 
 function getTitlePlaceholder(videoType: VideoType): string {
-  if (videoType === 'issue') return 'e.g. My position on school funding';
+  if (videoType === 'issue') return 'e.g. "Gun control" or "School funding"';
   return 'e.g. Endorsement from Jane Smith';
 }
 
@@ -160,6 +160,9 @@ export default function RecordScreen() {
                 value={videoTitle}
                 onChangeText={setVideoTitle}
               />
+              {videoType === 'issue' && (
+                <Text style={styles.titleHint}>Keep it short — just the topic, not a sentence.</Text>
+              )}
 
               {/* Hidden file input */}
               {/* @ts-ignore */}
@@ -474,6 +477,9 @@ export default function RecordScreen() {
                 value={videoTitle}
                 onChangeText={setVideoTitle}
               />
+              {videoType === 'issue' && (
+                <Text style={styles.titleHint}>Keep it short — just the topic, not a sentence.</Text>
+              )}
 
               <Text style={styles.webUploadInstructions}>
                 Select a video file from your device (max 60 seconds, MP4 or MOV recommended).
@@ -601,12 +607,13 @@ export default function RecordScreen() {
                 <>
                   <Text style={styles.titleLabel}>Video Title</Text>
                   <TextInput
-                    style={[styles.titleInput, { marginBottom: 24 }]}
+                    style={styles.titleInput}
                     placeholder={getTitlePlaceholder(videoType)}
                     placeholderTextColor={Colors.textSecondary}
                     value={videoTitle}
                     onChangeText={setVideoTitle}
                   />
+                  <Text style={[styles.titleHint, { marginBottom: 24 }]}>Keep it short — just the topic, not a sentence.</Text>
                 </>
               )}
 
@@ -875,6 +882,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.text,
     marginBottom: 6,
+  },
+  titleHint: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginTop: 6,
+    marginBottom: 8,
   },
   titleInput: {
     borderWidth: 1.5,
