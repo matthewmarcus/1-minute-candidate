@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert, ActivityIndicator, Platform, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { YouTubePlayer } from '@/components/YouTubePlayer';
 import { Header } from '@/components/Header';
@@ -137,7 +138,7 @@ export default function ReviewVideoScreen() {
 
         // Trigger the async watermark → YouTube upload pipeline on the VPS.
         // The Edge Function fetches all required data server-side from video_id.
-        const { error: fnError } = await supabaseAdmin.functions.invoke('trigger-watermark', {
+        const { error: fnError } = await supabase.functions.invoke('trigger-watermark', {
           body: { video_id: video.id },
         });
 
