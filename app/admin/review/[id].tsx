@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert, ActivityIndicator, Platform, useWindowDimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, TextInput, ActivityIndicator, Platform, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
@@ -10,7 +10,7 @@ import { Colors } from '@/constants/Colors';
 import type { Video } from '@/lib/types';
 
 type VideoWithCandidate = Video & {
-  candidates: { id: string; name: string; office_sought: string; email: string; bio: string | null; city: string | null; state: string | null; party: string | null } | null;
+  candidates: { id: string; name: string; office_sought: string; email: string; bio: string | null; city: string | null; state: string | null; party: string | null; slug: string | null } | null;
 };
 
 function StorageVideoPlayer({ url }: { url: string }) {
@@ -59,9 +59,12 @@ export default function ReviewVideoScreen() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [storageVideoUrl, setStorageVideoUrl] = useState<string | null>(null);
   const [showRejectNotes, setShowRejectNotes] = useState(false);
   const [rejectNotesError, setRejectNotesError] = useState<string | null>(null);
+  const [confirmingApprove, setConfirmingApprove] = useState(false);
+  const [confirmingReject, setConfirmingReject] = useState(false);
   const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchVideo = useCallback(async () => {
@@ -112,14 +115,7 @@ export default function ReviewVideoScreen() {
       return;
     }
 
-    Alert.alert(
-      'Reject Video?',
-      'This will reject the video and notify the candidate with your review notes.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Reject', style: 'destructive', onPress: () => { updateStatus('rejected'); } },
-      ]
-    );
+    setConfirmingReject(true);
   }
 
   async function updateStatus(status: 'approved' | 'rejected') {
@@ -176,7 +172,7 @@ export default function ReviewVideoScreen() {
               status: 'approved' as const,
               video_type: video.video_type,
               video_title: video.title,
-              profile_url: `https://1minutecandidate.com/(voter)/candidate/${video.candidates?.id}`,
+              profile_url: `https://1minutecandidate.com/candidate/${video.candidates?.slug}`,
             }
           : {
               candidate_email: video.candidates?.email,
@@ -185,7 +181,7 @@ export default function ReviewVideoScreen() {
               review_notes: reviewNotes.trim() || null,
               video_type: video.video_type,
               video_title: video.title,
-              profile_url: `https://1minutecandidate.com/(voter)/candidate/${video.candidates?.id}`,
+              profile_url: `https://1minutecandidate.com/candidate/${video.candidates?.slug}`,
             };
       const { error: notifyError } = await supabaseAdmin.functions.invoke('notify-candidate', {
         body: notifyBody,
@@ -205,7 +201,7 @@ export default function ReviewVideoScreen() {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'An unexpected error occurred.';
       console.error('Approve error:', message, err);
-      Alert.alert('Error', message);
+      setErrorMessage(message);
     } finally {
       setSubmitting(false);
     }
@@ -297,9 +293,50 @@ export default function ReviewVideoScreen() {
           <ActivityIndicator size="large" color={Colors.primary} />
         </View>
       ) : (
-        <View style={styles.actions}>
-          {showRejectNotes ? (
-            <>
+        <View style={styles.actionsWrapper}>
+          {errorMessage && (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorBannerText}>{errorMessage}</Text>
+            </View>
+          )}
+          {showRejectNotes && confirmingReject ? (
+            <View style={styles.confirmBox}>
+              <Text style={styles.confirmText}>Reject this video and notify the candidate?</Text>
+              <View style={styles.actions}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => setConfirmingReject(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.rejectButtonFilled}
+                  onPress={() => updateStatus('rejected')}
+                >
+                  <Text style={styles.rejectButtonFilledText}>Confirm</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : confirmingApprove ? (
+            <View style={styles.confirmBox}>
+              <Text style={styles.confirmText}>Approve this video? This cannot be undone.</Text>
+              <View style={styles.actions}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => setConfirmingApprove(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.approveButton}
+                  onPress={() => updateStatus('approved')}
+                >
+                  <Text style={styles.approveButtonText}>Confirm</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : showRejectNotes ? (
+            <View style={styles.actions}>
               <TouchableOpacity
                 style={styles.cancelButton}
                 onPress={() => {
@@ -316,9 +353,9 @@ export default function ReviewVideoScreen() {
               >
                 <Text style={styles.rejectButtonFilledText}>Confirm Rejection</Text>
               </TouchableOpacity>
-            </>
+            </View>
           ) : (
-            <>
+            <View style={styles.actions}>
               <TouchableOpacity
                 style={styles.rejectButton}
                 onPress={handleRejectPress}
@@ -328,19 +365,13 @@ export default function ReviewVideoScreen() {
               <TouchableOpacity
                 style={styles.approveButton}
                 onPress={() => {
-                  Alert.alert(
-                    'Approve Video?',
-                    'This will approve the video and notify the candidate. This cannot be undone.',
-                    [
-                      { text: 'Cancel', style: 'cancel' },
-                      { text: 'Approve', onPress: () => { updateStatus('approved'); } },
-                    ]
-                  );
+                  setErrorMessage(null);
+                  setConfirmingApprove(true);
                 }}
               >
                 <Text style={styles.approveButtonText}>Approve</Text>
               </TouchableOpacity>
-            </>
+            </View>
           )}
         </View>
       )}
@@ -542,5 +573,36 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
     opacity: 0.8,
+  },
+  actionsWrapper: {
+    gap: 0,
+  },
+  errorBanner: {
+    margin: 24,
+    marginBottom: 0,
+    backgroundColor: Colors.error + '20',
+    borderWidth: 1.5,
+    borderColor: Colors.error,
+    borderRadius: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  errorBannerText: {
+    color: Colors.error,
+    fontSize: 15,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  confirmBox: {
+    padding: 24,
+    paddingBottom: 0,
+    gap: 12,
+  },
+  confirmText: {
+    fontSize: 15,
+    color: Colors.text,
+    fontWeight: '500',
+    textAlign: 'center',
   },
 });
