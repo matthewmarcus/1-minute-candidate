@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Linking, Platform, Image } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Linking, Platform, Image, useWindowDimensions } from 'react-native';
+import { useLocalSearchParams, router } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
+import Svg, { Path } from 'react-native-svg';
 import { supabase } from '@/lib/supabase';
-import { VideoPlayer } from '@/components/VideoPlayer';
+import { YouTubePlayer } from '@/components/YouTubePlayer';
+import { Header } from '@/components/Header';
+import { PageContainer } from '@/components/PageContainer';
 import { Colors } from '@/constants/Colors';
 import type { Candidate, Video } from '@/lib/types';
-
-const { width } = require('react-native').Dimensions.get('window');
-const THUMBNAIL_HEIGHT = (width * 9) / 16;
 
 const BASE_URL = 'https://1minutecandidate.com';
 
@@ -51,63 +51,28 @@ function ProfilePhoto({ photoUrl, name }: { photoUrl: string | null; name: strin
   );
 }
 
-function UnlistedVideoThumbnail({ videoId, youtubeUrl }: { videoId: string; youtubeUrl: string }) {
-  if (Platform.OS === 'web') {
-    return (
-      // @ts-ignore
-      <a
-        href={youtubeUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{ display: 'block', position: 'relative', width: '100%', height: THUMBNAIL_HEIGHT, backgroundColor: '#000', textDecoration: 'none' }}
-      >
-        {/* @ts-ignore */}
-        <img
-          src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
-          alt="Video thumbnail"
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-        />
-        {/* @ts-ignore */}
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {/* @ts-ignore */}
-          <div style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {/* @ts-ignore */}
-            <div style={{ width: 0, height: 0, borderTop: '14px solid transparent', borderBottom: '14px solid transparent', borderLeft: '24px solid white', marginLeft: 6 }} />
-          </div>
-        </div>
-      </a>
-    );
-  }
 
+function XLogoIcon({ size = 22, color = Colors.primary }: { size?: number; color?: string }) {
   return (
-    <TouchableOpacity
-      activeOpacity={0.85}
-      onPress={() => Linking.openURL(youtubeUrl)}
-      style={styles.thumbnailContainer}
-    >
-      <Image
-        source={{ uri: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` }}
-        style={styles.thumbnailImage}
-        resizeMode="cover"
-      />
-      <View style={styles.playOverlay}>
-        <View style={styles.playButton}>
-          <View style={styles.playTriangle} />
-        </View>
-      </View>
-    </TouchableOpacity>
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+      <Path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.742l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.912-5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </Svg>
   );
 }
 
+type SocialLink =
+  | { key: 'website' | 'facebook'; url: string; icon: React.ComponentProps<typeof Ionicons>['name']; label: string; isX?: false }
+  | { key: 'twitter'; url: string; icon: null; label: string; isX: true };
+
 function SocialLinks({ candidate }: { candidate: Candidate }) {
-  const links: { key: string; url: string; icon: React.ComponentProps<typeof Ionicons>['name']; label: string }[] = [];
+  const links: SocialLink[] = [];
 
   if (candidate.website_url) {
     links.push({ key: 'website', url: candidate.website_url, icon: 'globe-outline', label: 'Website' });
   }
   if (candidate.twitter_handle) {
     const handle = candidate.twitter_handle.replace(/^@/, '');
-    links.push({ key: 'twitter', url: `https://x.com/${handle}`, icon: 'logo-twitter', label: 'X / Twitter' });
+    links.push({ key: 'twitter', url: `https://x.com/${handle}`, icon: null, label: 'X', isX: true });
   }
   if (candidate.facebook_url) {
     links.push({ key: 'facebook', url: candidate.facebook_url, icon: 'logo-facebook', label: 'Facebook' });
@@ -125,7 +90,9 @@ function SocialLinks({ candidate }: { candidate: Candidate }) {
           accessibilityLabel={link.label}
           accessibilityRole="link"
         >
-          <Ionicons name={link.icon} size={22} color={Colors.primary} />
+          {link.isX
+            ? <XLogoIcon size={22} color={Colors.primary} />
+            : <Ionicons name={link.icon!} size={22} color={Colors.primary} />}
         </TouchableOpacity>
       ))}
     </View>
@@ -147,7 +114,7 @@ function ShareButtons({ candidate }: { candidate: Candidate }) {
   };
 
   const handleTwitter = () => {
-    const text = encodeURIComponent(shareText);
+    const text = encodeURIComponent(`${shareText}`);
     const url = encodeURIComponent(profileUrl);
     Linking.openURL(`https://x.com/intent/tweet?text=${text}&url=${url}`);
   };
@@ -157,10 +124,14 @@ function ShareButtons({ candidate }: { candidate: Candidate }) {
     Linking.openURL(`https://www.facebook.com/sharer/sharer.php?u=${url}`);
   };
 
-  const buttons: { label: string; icon: React.ComponentProps<typeof Ionicons>['name']; onPress: () => void }[] = [
+  type ShareBtn =
+    | { label: string; icon: React.ComponentProps<typeof Ionicons>['name']; onPress: () => void; isX?: false }
+    | { label: string; icon: null; onPress: () => void; isX: true };
+
+  const buttons: ShareBtn[] = [
     { label: 'Copy Link', icon: 'link-outline', onPress: handleCopyLink },
     { label: 'SMS', icon: 'chatbubble-outline', onPress: handleSMS },
-    { label: 'X / Twitter', icon: 'logo-twitter', onPress: handleTwitter },
+    { label: 'X', icon: null, onPress: handleTwitter, isX: true },
     { label: 'Facebook', icon: 'logo-facebook', onPress: handleFacebook },
   ];
 
@@ -175,7 +146,9 @@ function ShareButtons({ candidate }: { candidate: Candidate }) {
             onPress={btn.onPress}
             accessibilityLabel={btn.label}
           >
-            <Ionicons name={btn.icon} size={20} color={Colors.primary} />
+            {btn.isX
+              ? <XLogoIcon size={20} color={Colors.primary} />
+              : <Ionicons name={btn.icon!} size={20} color={Colors.primary} />}
             <Text style={styles.shareButtonLabel}>{btn.label}</Text>
           </TouchableOpacity>
         ))}
@@ -184,37 +157,40 @@ function ShareButtons({ candidate }: { candidate: Candidate }) {
   );
 }
 
-export default function CandidateProfileBySlug() {
+export default function CandidateProfileScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const [candidate, setCandidate] = useState<Candidate | null>(null);
-  const [video, setVideo] = useState<Video | null>(null);
+  const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
+  const { width } = useWindowDimensions();
+  const videoWidth = Math.min(width, 680) - 40;
+  const videoHeight = videoWidth * (9 / 16);
 
   useEffect(() => {
     if (!slug) return;
 
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-/.test(slug as string);
+
     supabase
       .from('candidates')
       .select('*')
-      .eq('slug', slug)
+      .eq(isUuid ? 'id' : 'slug', slug)
       .single()
-      .then(({ data, error }) => {
-        if (error || !data) {
+      .then(({ data: candidateData, error }) => {
+        if (error || !candidateData) {
           setLoading(false);
           return;
         }
-        setCandidate(data);
+        setCandidate(candidateData);
 
         supabase
           .from('videos')
-          .select('*')
-          .eq('candidate_id', data.id)
+          .select('id, video_type, title, status, youtube_url, youtube_video_id, youtube_privacy')
+          .eq('candidate_id', candidateData.id)
           .eq('status', 'approved')
           .order('approved_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-          .then(({ data: videoData }) => {
-            setVideo(videoData ?? null);
+          .then(({ data: videosData }) => {
+            setVideos(videosData ?? []);
             setLoading(false);
           });
       });
@@ -236,69 +212,111 @@ export default function CandidateProfileBySlug() {
     );
   }
 
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {video?.youtube_url && (
-        video.youtube_privacy === 'public'
-          ? <VideoPlayer youtubeUrl={video.youtube_url} />
-          : <UnlistedVideoThumbnail videoId={video.youtube_video_id!} youtubeUrl={video.youtube_url} />
-      )}
+  const overviewVideo = videos.find(v => v.video_type === 'overview') ?? null;
+  const issueVideos = videos.filter(v => v.video_type === 'issue');
+  const endorsementVideos = videos.filter(v => v.video_type === 'endorsement');
 
-      <View style={styles.info}>
-        <View style={styles.header}>
-          <ProfilePhoto photoUrl={candidate.photo_url} name={candidate.name} />
-          <View style={styles.headerText}>
-            <Text style={styles.name}>{candidate.name}</Text>
-            <Text style={styles.office}>{candidate.office_sought}</Text>
-            <View style={styles.badges}>
-              {candidate.party && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{candidate.party}</Text>
-                </View>
-              )}
-              {candidate.state && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{candidate.state}</Text>
-                </View>
-              )}
+  return (
+    <View style={styles.outerContainer}>
+      <Header />
+      <PageContainer style={{ paddingHorizontal: 0, paddingTop: 16 }}>
+        {/* Overview video — centered within content column */}
+        {overviewVideo?.youtube_url && overviewVideo.youtube_video_id && (
+          <View style={styles.overviewVideoContainer}>
+            <YouTubePlayer videoId={overviewVideo.youtube_video_id} width={videoWidth} height={videoHeight} />
+          </View>
+        )}
+
+        <View style={styles.info}>
+          {/* Photo + name header */}
+          <View style={styles.header}>
+            <ProfilePhoto photoUrl={candidate.photo_url} name={candidate.name} />
+            <View style={styles.headerText}>
+              <Text style={styles.name}>{candidate.name}</Text>
+              <Text style={styles.office}>{candidate.office_sought}</Text>
+              <View style={styles.badges}>
+                {candidate.party && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{candidate.party}</Text>
+                  </View>
+                )}
+                {candidate.state && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{candidate.state}</Text>
+                  </View>
+                )}
+              </View>
             </View>
           </View>
+
+          {(candidate.city || candidate.district) && (
+            <Text style={styles.district}>
+              {[candidate.city || null, candidate.district || null]
+                .filter(Boolean)
+                .join(' · ')}
+            </Text>
+          )}
+
+          <SocialLinks candidate={candidate} />
+
+          {candidate.bio && (
+            <>
+              <Text style={styles.sectionTitle}>About</Text>
+              <Text style={styles.bio}>{candidate.bio}</Text>
+            </>
+          )}
+
+          {videos.length === 0 && (
+            <View style={styles.noVideo}>
+              <Text style={styles.noVideoText}>
+                This candidate hasn't submitted their 60-second video yet.
+              </Text>
+            </View>
+          )}
         </View>
 
-        {candidate.district && (
-          <Text style={styles.district}>{candidate.district}</Text>
-        )}
-
-        <SocialLinks candidate={candidate} />
-
-        {candidate.bio && (
-          <>
-            <Text style={styles.sectionTitle}>About</Text>
-            <Text style={styles.bio}>{candidate.bio}</Text>
-          </>
-        )}
-
-        {!video && (
-          <View style={styles.noVideo}>
-            <Text style={styles.noVideoText}>
-              This candidate hasn't submitted their 60-second video yet.
-            </Text>
+        {/* On the Issues section */}
+        {issueVideos.length > 0 && (
+          <View style={styles.videoSection}>
+            <Text style={styles.videoSectionTitle}>On the Issues</Text>
+            {issueVideos.map((v, index) => (
+              <View key={v.id} style={styles.videoCard}>
+                {v.title ? (
+                  <Text style={styles.videoCardTitle}>{v.title}</Text>
+                ) : null}
+                {v.youtube_video_id && <YouTubePlayer videoId={v.youtube_video_id} width={videoWidth} height={videoHeight} />}
+                {index < issueVideos.length - 1 && <View style={styles.videoDivider} />}
+              </View>
+            ))}
           </View>
         )}
-      </View>
 
-      <ShareButtons candidate={candidate} />
-    </ScrollView>
+        {/* Endorsements section */}
+        {endorsementVideos.length > 0 && (
+          <View style={styles.videoSection}>
+            <Text style={styles.videoSectionTitle}>Endorsements</Text>
+            {endorsementVideos.map((v, index) => (
+              <View key={v.id} style={styles.videoCard}>
+                {v.title ? (
+                  <Text style={styles.videoCardTitle}>{v.title}</Text>
+                ) : null}
+                {v.youtube_video_id && <YouTubePlayer videoId={v.youtube_video_id} width={videoWidth} height={videoHeight} />}
+                {index < endorsementVideos.length - 1 && <View style={styles.videoDivider} />}
+              </View>
+            ))}
+          </View>
+        )}
+
+        <ShareButtons candidate={candidate} />
+      </PageContainer>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  outerContainer: {
     flex: 1,
     backgroundColor: Colors.background,
-  },
-  content: {
-    paddingBottom: 40,
   },
   centered: {
     flex: 1,
@@ -413,6 +431,37 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
+
+  // Issue / Endorsement video sections
+  videoSection: {
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingTop: 16,
+  },
+  videoSectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.primary,
+    fontFamily: 'Quicksand_700Bold',
+    marginBottom: 14,
+  },
+  videoCard: {
+    marginBottom: 4,
+  },
+  videoCardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.text,
+    marginBottom: 10,
+  },
+  videoDivider: {
+    height: 1,
+    backgroundColor: Colors.border,
+    marginVertical: 16,
+  },
+
   shareSection: {
     paddingHorizontal: 24,
     paddingTop: 8,
@@ -441,37 +490,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'center',
   },
-  thumbnailContainer: {
-    width: '100%',
-    height: THUMBNAIL_HEIGHT,
-    backgroundColor: '#000',
-  },
-  thumbnailImage: {
-    width: '100%',
-    height: '100%',
-  },
-  playOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  playButton: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  playTriangle: {
-    width: 0,
-    height: 0,
-    borderTopWidth: 14,
-    borderBottomWidth: 14,
-    borderLeftWidth: 24,
-    borderTopColor: 'transparent',
-    borderBottomColor: 'transparent',
-    borderLeftColor: '#fff',
-    marginLeft: 6,
+  overviewVideoContainer: {
+    alignSelf: 'center',
   },
 });
