@@ -11,7 +11,7 @@ import { Colors } from '@/constants/Colors';
 import { Header } from '@/components/Header';
 import { PageContainer } from '@/components/PageContainer';
 import { MAX_RECORDING_SECONDS } from '@/constants/Config';
-import { countSlots } from '@/lib/videoSlots';
+import { countSlots, countOverviewSlots } from '@/lib/videoSlots';
 
 type RecordingState = 'tips' | 'idle' | 'recording' | 'preview';
 type VideoType = 'overview' | 'issue' | 'endorsement';
@@ -61,7 +61,7 @@ export default function RecordScreen() {
   const [videoDurationSecs, setVideoDurationSecs] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [videoTitle, setVideoTitle] = useState('');
-  const [slotsLoading, setSlotsLoading] = useState(videoType !== 'overview');
+  const [slotsLoading, setSlotsLoading] = useState(true);
   const [slotsError, setSlotsError] = useState<string | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -70,9 +70,9 @@ export default function RecordScreen() {
   const isLandscape = useIsLandscape();
   const insets = useSafeAreaInsets();
 
-  // Slot validation for issue/endorsement
+  // Slot validation for all video types
   useEffect(() => {
-    if (videoType === 'overview' || !session?.user) {
+    if (!session?.user) {
       setSlotsLoading(false);
       return;
     }
@@ -92,15 +92,26 @@ export default function RecordScreen() {
 
       const purchases = purchasesResult.data ?? [];
       const videos = videosResult.data ?? [];
-      const slots = countSlots(purchases, videos, videoType as 'issue' | 'endorsement');
 
-      if (slots.remaining === 0) {
-        const typeName = videoType === 'issue' ? 'issue' : 'endorsement';
-        setSlotsError(
-          `You have no ${typeName} video slots remaining. Purchase more from the Billing page.`
-        );
+      if (videoType === 'overview') {
+        const { remaining } = countOverviewSlots(purchases, videos);
+        if (remaining === 0) {
+          setSlotsError(
+            "You've used your overview video slot. Purchase a new slot from the Billing screen to re-record."
+          );
+        } else {
+          setSlotsError(null);
+        }
       } else {
-        setSlotsError(null);
+        const slots = countSlots(purchases, videos, videoType as 'issue' | 'endorsement');
+        if (slots.remaining === 0) {
+          const typeName = videoType === 'issue' ? 'issue' : 'endorsement';
+          setSlotsError(
+            `You have no ${typeName} video slots remaining. Purchase more from the Billing page.`
+          );
+        } else {
+          setSlotsError(null);
+        }
       }
       setSlotsLoading(false);
     }
@@ -564,17 +575,20 @@ export default function RecordScreen() {
         <PageContainer style={{ paddingTop: 24 }}>
           <Text style={styles.tipsScreenTitle}>{getScreenTitle(videoType)}</Text>
 
-          {/* Slot error for issue videos */}
+          {/* Slot check */}
           {slotsLoading ? (
             <ActivityIndicator color={Colors.primary} style={{ marginBottom: 16 }} />
           ) : slotsError ? (
             <View style={styles.slotsErrorBox}>
               <Text style={styles.slotsErrorText}>{slotsError}</Text>
-              <TouchableOpacity onPress={() => router.push('/(candidate)/billing')}>
-                <Text style={styles.slotsErrorLink}>Go to Billing</Text>
+              <TouchableOpacity
+                style={[styles.readyButton, { marginTop: 8 }]}
+                onPress={() => router.push('/(candidate)/billing')}
+              >
+                <Text style={styles.readyButtonText}>Go to Billing</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.cancelButtonOutline, { marginTop: 16 }]}
+                style={[styles.cancelButtonOutline, { marginTop: 12 }]}
                 onPress={() => router.replace('/dashboard')}
               >
                 <Text style={styles.cancelButtonOutlineText}>Go Back</Text>

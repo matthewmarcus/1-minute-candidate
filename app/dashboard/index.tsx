@@ -19,7 +19,7 @@ import { Colors } from '@/constants/Colors';
 import { Header } from '@/components/Header';
 import { PageContainer } from '@/components/PageContainer';
 import { YouTubePlayer } from '@/components/YouTubePlayer';
-import { countSlots } from '@/lib/videoSlots';
+import { countSlots, countOverviewSlots } from '@/lib/videoSlots';
 import type { Candidate, Video } from '@/lib/types';
 
 type RaceLevel = 'local' | 'state' | 'national';
@@ -64,10 +64,27 @@ function SlotPill({ used, purchased }: { used: number; purchased: number }) {
   );
 }
 
-function OverviewVideoSection({ video, profileUnlocked }: { video: Video | null; profileUnlocked: boolean }) {
+function OverviewVideoSection({
+  video,
+  profileUnlocked,
+  overviewRemaining,
+  raceLevel,
+}: {
+  video: Video | null;
+  profileUnlocked: boolean;
+  overviewRemaining: number;
+  raceLevel: RaceLevel;
+}) {
   const { width: windowWidth } = useWindowDimensions();
   const videoWidth = Math.min(windowWidth, 680) - 72;
   const videoHeight = videoWidth * (9 / 16);
+
+  const OVERVIEW_RERECORD_PRICES: Record<RaceLevel, number> = {
+    local: 29,
+    state: 49,
+    national: 99,
+  };
+  const rerecordPrice = OVERVIEW_RERECORD_PRICES[raceLevel];
 
   if (!profileUnlocked) {
     return (
@@ -105,6 +122,9 @@ function OverviewVideoSection({ video, profileUnlocked }: { video: Video | null;
     );
   }
 
+  const isActive = ['submitted', 'under_review', 'approved'].includes(video.status);
+  const showLocked = overviewRemaining === 0 && isActive;
+
   return (
     <View style={styles.subsection}>
       <View style={styles.subsectionHeader}>
@@ -120,12 +140,27 @@ function OverviewVideoSection({ video, profileUnlocked }: { video: Video | null;
           <Text style={styles.reviewTitle}>Under review — we'll email you when it's approved.</Text>
         </View>
       )}
-      <TouchableOpacity
-        style={[styles.outlineButton, { marginTop: 8 }]}
-        onPress={() => router.push('/(candidate)/record?video_type=overview')}
-      >
-        <Text style={styles.outlineButtonText}>Record New Overview Video</Text>
-      </TouchableOpacity>
+      {showLocked ? (
+        <View style={[styles.lockCtaContainer, { marginTop: 8, borderWidth: 1, borderColor: Colors.border, borderRadius: 10, padding: 14 }]}>
+          <Ionicons name="lock-closed-outline" size={22} color={Colors.textSecondary} style={styles.lockIcon} />
+          <Text style={[styles.subsectionTitle, { marginBottom: 4 }]}>Want to update your overview video?</Text>
+          <Text style={[styles.lockBody, { marginBottom: 12 }]}>Purchase a new slot to re-record.</Text>
+          <TouchableOpacity
+            style={styles.ctaButton}
+            onPress={() => router.push('/(candidate)/billing')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.ctaButtonText}>Update Overview — ${rerecordPrice}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <TouchableOpacity
+          style={[styles.outlineButton, { marginTop: 8 }]}
+          onPress={() => router.push('/(candidate)/record?video_type=overview')}
+        >
+          <Text style={styles.outlineButtonText}>Record New Overview Video</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -440,7 +475,11 @@ export default function CandidateDashboard() {
   const raceLevel = (profile?.race_level as RaceLevel) ?? 'local';
   const videoPrice = VIDEO_PRICES[raceLevel];
 
-  const overviewVideo = videos.find(v => v.video_type === 'overview') ?? null;
+  const overviewSlots = countOverviewSlots(purchases, videos);
+  const overviewVideo =
+    videos.find(v => v.video_type === 'overview' && ['submitted', 'under_review', 'approved'].includes(v.status)) ??
+    videos.find(v => v.video_type === 'overview') ??
+    null;
   const issueVideos = videos.filter(v => v.video_type === 'issue');
   const endorsementVideos = videos.filter(v => v.video_type === 'endorsement');
 
@@ -474,7 +513,12 @@ export default function CandidateDashboard() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>My Videos</Text>
 
-          <OverviewVideoSection video={overviewVideo} profileUnlocked={profileUnlocked} />
+          <OverviewVideoSection
+            video={overviewVideo}
+            profileUnlocked={profileUnlocked}
+            overviewRemaining={overviewSlots.remaining}
+            raceLevel={raceLevel}
+          />
 
           {profileUnlocked && (
             <>
