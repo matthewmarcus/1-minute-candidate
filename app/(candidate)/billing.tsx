@@ -48,6 +48,8 @@ function formatProductType(type: string): string {
       return 'Issue Video';
     case 'endorsement_video':
       return 'Endorsement Video';
+    case 'overview_rerecord':
+      return 'Overview Re-record';
     default:
       return type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   }
@@ -281,7 +283,27 @@ export default function SubscribeScreen() {
           </View>
         )}
 
-        {/* SECTION 4 — Purchase History */}
+        {/* SECTION 4 — Update Overview Video */}
+        {profileUnlocked && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Update Overview Video</Text>
+            <Text style={styles.cardDescription}>
+              Re-record your 60-second overview. Your existing video stays live until the new one is approved.
+            </Text>
+            <TouchableOpacity
+              style={[styles.button, styles.buttonNavy, purchasing && styles.buttonDisabled]}
+              onPress={() => handlePurchase('overview_rerecord', 1)}
+              disabled={purchasing}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.buttonText}>
+                {purchasing ? 'Loading...' : `Update Overview — $${videoPrice}`}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* SECTION 5 — Purchase History */}
         {purchases.length > 0 && (
           <View style={styles.historySection}>
             <Text style={styles.historyTitle}>Purchase History</Text>

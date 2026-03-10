@@ -14,3 +14,17 @@ export function countSlots(
   ).length;
   return { purchased, used, remaining: Math.max(0, purchased - used) };
 }
+
+export function countOverviewSlots(
+  purchases: { product_type: string }[],
+  videos: { video_type: string; status: string }[]
+): { purchased: number; used: number; remaining: number } {
+  const purchased = purchases.filter(
+    p => p.product_type === 'profile_setup' || p.product_type === 'overview_rerecord'
+  ).length;
+  const used = videos.filter(
+    v => v.video_type === 'overview' &&
+         ['submitted', 'under_review', 'approved'].includes(v.status)
+  ).length;
+  return { purchased, used, remaining: Math.max(0, purchased - used) };
+}
