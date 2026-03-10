@@ -11,16 +11,20 @@ interface YouTubePlayerProps {
 
 export function YouTubePlayer({ videoId, width, height, borderRadius = 8 }: YouTubePlayerProps) {
   if (Platform.OS === 'web') {
-    // Web: standard embed works for unlisted videos
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { WebView } = require('react-native-webview');
+    // Web: use a plain iframe — react-native-webview does NOT support web
     return (
-      <WebView
-        source={{ uri: `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1` }}
-        style={{ width, height, borderRadius }}
-        scrollEnabled={false}
-        allowsFullscreenVideo
-      />
+      <View style={{ width, height, borderRadius, overflow: 'hidden' }}>
+        {/* @ts-ignore — iframe is a valid web element */}
+        <iframe
+          width={width}
+          height={height}
+          src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1`}
+          frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          style={{ border: 'none', borderRadius, display: 'block' }}
+        />
+      </View>
     );
   }
 
