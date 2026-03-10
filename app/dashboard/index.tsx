@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,8 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import * as ExpoLinking from 'expo-linking';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
@@ -401,50 +402,61 @@ export default function CandidateDashboard() {
   const [issueQty, setIssueQty] = useState(1);
   const [endorsementQty, setEndorsementQty] = useState(1);
 
-  useEffect(() => {
+  const loadDashboard = useCallback(async () => {
     if (!session?.user) return;
 
-    async function load() {
-      const [profileResult, videosResult, purchasesResult] = await Promise.all([
-        supabase
-          .from('candidates')
-          .select('*')
-          .eq('id', session!.user.id)
-          .single(),
-        supabase
-          .from('videos')
-          .select('id, video_type, title, status, youtube_url, youtube_video_id, youtube_privacy, submitted_at')
-          .eq('candidate_id', session!.user.id)
-          .order('submitted_at', { ascending: false }),
-        supabase
-          .from('purchases')
-          .select('product_type')
-          .eq('candidate_id', session!.user.id),
-      ]);
+    const [profileResult, videosResult, purchasesResult] = await Promise.all([
+      supabase
+        .from('candidates')
+        .select('*')
+        .eq('id', session.user.id)
+        .single(),
+      supabase
+        .from('videos')
+        .select('id, video_type, title, status, youtube_url, youtube_video_id, youtube_privacy, submitted_at')
+        .eq('candidate_id', session.user.id)
+        .order('submitted_at', { ascending: false }),
+      supabase
+        .from('purchases')
+        .select('product_type')
+        .eq('candidate_id', session.user.id),
+    ]);
 
-      if (profileResult.data) setProfile(profileResult.data);
-      setVideos(videosResult.data ?? []);
-      setPurchases(purchasesResult.data ?? []);
-      setLoading(false);
-    }
-
-    load();
+    if (profileResult.data) setProfile(profileResult.data);
+    setVideos(videosResult.data ?? []);
+    setPurchases(purchasesResult.data ?? []);
+    setLoading(false);
   }, [session]);
+
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadDashboard();
+    }, [loadDashboard])
+  );
 
   async function handlePurchase(product_type: string, quantity: number = 1) {
     setPurchasing(true);
     try {
-      const appUrl =
+      const successUrl =
         Platform.OS === 'web'
-          ? (typeof window !== 'undefined' ? window.location.origin : 'https://1minutecandidate.com')
-          : 'https://1minutecandidate.com';
+          ? `${typeof window !== 'undefined' ? window.location.origin : 'https://1minutecandidate.com'}/(candidate)/payment-success`
+          : ExpoLinking.createURL('/payment-success');
+
+      const cancelUrl =
+        Platform.OS === 'web'
+          ? `${typeof window !== 'undefined' ? window.location.origin : 'https://1minutecandidate.com'}/(candidate)/billing`
+          : ExpoLinking.createURL('/billing');
 
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: {
           product_type,
           quantity,
-          success_url: `${appUrl}/(candidate)/payment-success`,
-          cancel_url: `${appUrl}/(candidate)/billing`,
+          success_url: successUrl,
+          cancel_url: cancelUrl,
         },
       });
 
