@@ -172,7 +172,7 @@ function OverviewVideoSection({
       {video.status === 'approved' && video.youtube_video_id && video.youtube_url && (
         <YouTubePlayer videoId={video.youtube_video_id} width={videoWidth} height={videoHeight} />
       )}
-      {(video.status === 'submitted' || video.status === 'under_review') && (
+      {(video.status === 'submitted' || video.status === 'under_review') && !hasInFlightOverview && (
         <View style={styles.reviewState}>
           <Text style={styles.reviewIcon}>⏳</Text>
           <Text style={styles.reviewTitle}>Under review — we'll email you when it's approved.</Text>
