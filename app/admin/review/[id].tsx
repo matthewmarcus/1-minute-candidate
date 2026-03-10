@@ -125,6 +125,7 @@ export default function ReviewVideoScreen() {
   async function updateStatus(status: 'approved' | 'rejected') {
     if (!video) return;
 
+    console.log('Approve button tapped, video id:', video.id, 'status:', status);
     setSubmitting(true);
 
     try {
@@ -138,6 +139,7 @@ export default function ReviewVideoScreen() {
 
         // Trigger the async watermark → YouTube upload pipeline on the VPS.
         // The Edge Function fetches all required data server-side from video_id.
+        console.log('Invoking trigger-watermark edge function for video:', video.id);
         const { error: fnError } = await supabase.functions.invoke('trigger-watermark', {
           body: { video_id: video.id },
         });
@@ -202,6 +204,7 @@ export default function ReviewVideoScreen() {
       }, 4000);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'An unexpected error occurred.';
+      console.error('Approve error:', message, err);
       Alert.alert('Error', message);
     } finally {
       setSubmitting(false);
