@@ -122,7 +122,14 @@ export default function ReviewVideoScreen() {
       return;
     }
 
-    updateStatus('rejected');
+    Alert.alert(
+      'Reject Video?',
+      'This will reject the video and notify the candidate with your review notes.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Reject', style: 'destructive', onPress: () => { updateStatus('rejected'); } },
+      ]
+    );
   }
 
   async function updateStatus(status: 'approved' | 'rejected') {
@@ -353,7 +360,16 @@ export default function ReviewVideoScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.approveButton}
-                onPress={() => updateStatus('approved')}
+                onPress={() => {
+                  Alert.alert(
+                    'Approve Video?',
+                    'This will approve the video and notify the candidate. This cannot be undone.',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Approve', onPress: () => { updateStatus('approved'); } },
+                    ]
+                  );
+                }}
               >
                 <Text style={styles.approveButtonText}>Approve</Text>
               </TouchableOpacity>
