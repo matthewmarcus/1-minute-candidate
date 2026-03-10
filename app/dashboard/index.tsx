@@ -80,7 +80,7 @@ function OverviewVideoSection({ video, profileUnlocked }: { video: Video | null;
           </Text>
           <TouchableOpacity
             style={styles.ctaButton}
-            onPress={() => router.push('/(candidate)/subscribe')}
+            onPress={() => router.push('/(candidate)/billing')}
             activeOpacity={0.8}
           >
             <Text style={styles.ctaButtonText}>Unlock My Profile</Text>
@@ -157,7 +157,7 @@ function IssueVideosSection({
           No slots purchased.{' '}
           <Text
             style={styles.linkText}
-            onPress={() => router.push('/(candidate)/subscribe')}
+            onPress={() => router.push('/(candidate)/billing')}
           >
             Purchase issue video slots from the Billing page.
           </Text>
@@ -231,7 +231,7 @@ function EndorsementVideosSection({
           No slots purchased.{' '}
           <Text
             style={styles.linkText}
-            onPress={() => router.push('/(candidate)/subscribe')}
+            onPress={() => router.push('/(candidate)/billing')}
           >
             Purchase endorsement video slots from the Billing page.
           </Text>
@@ -409,7 +409,7 @@ export default function CandidateDashboard() {
           product_type,
           quantity,
           success_url: `${appUrl}/(candidate)/payment-success`,
-          cancel_url: `${appUrl}/(candidate)/subscribe`,
+          cancel_url: `${appUrl}/(candidate)/billing`,
         },
       });
 

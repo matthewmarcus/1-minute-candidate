@@ -23,7 +23,7 @@ const CANDIDATE_TABS = [
   { key: 'dashboard', label: 'Dashboard', href: '/dashboard' },
   { key: 'profile', label: 'My Profile', href: '/(candidate)/profile' },
   { key: 'record', label: 'Record Video', href: '/(candidate)/record' },
-  { key: 'subscribe', label: 'Billing', href: '/(candidate)/subscribe' },
+  { key: 'subscribe', label: 'Billing', href: '/(candidate)/billing' },
 ] as const;
 
 type CandidateTabKey = typeof CANDIDATE_TABS[number]['key'];
@@ -32,7 +32,7 @@ function getActiveTab(pathname: string): CandidateTabKey | null {
   if (pathname === '/dashboard' || pathname.startsWith('/dashboard')) return 'dashboard';
   if (pathname.includes('/profile')) return 'profile';
   if (pathname.includes('/record')) return 'record';
-  if (pathname.includes('/subscribe')) return 'subscribe';
+  if (pathname.includes('/billing')) return 'subscribe';
   return null;
 }
 
@@ -219,7 +219,7 @@ export function Header() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.mobileMenuItem}
-                onPress={() => { setMenuOpen(false); router.push('/(candidate)/subscribe'); }}
+                onPress={() => { setMenuOpen(false); router.push('/(candidate)/billing'); }}
               >
                 <Text style={styles.mobileMenuText}>Billing</Text>
               </TouchableOpacity>

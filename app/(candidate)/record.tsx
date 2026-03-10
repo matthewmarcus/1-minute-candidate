@@ -134,7 +134,7 @@ export default function RecordScreen() {
           ) : slotsError ? (
             <View style={styles.slotsErrorBox}>
               <Text style={styles.slotsErrorText}>{slotsError}</Text>
-              <TouchableOpacity onPress={() => router.push('/(candidate)/subscribe')}>
+              <TouchableOpacity onPress={() => router.push('/(candidate)/billing')}>
                 <Text style={styles.slotsErrorLink}>Go to Billing</Text>
               </TouchableOpacity>
             </View>
@@ -448,7 +448,7 @@ export default function RecordScreen() {
           ) : slotsError ? (
             <View style={styles.slotsErrorBox}>
               <Text style={styles.slotsErrorText}>{slotsError}</Text>
-              <TouchableOpacity onPress={() => router.push('/(candidate)/subscribe')}>
+              <TouchableOpacity onPress={() => router.push('/(candidate)/billing')}>
                 <Text style={styles.slotsErrorLink}>Go to Billing</Text>
               </TouchableOpacity>
             </View>
@@ -570,7 +570,7 @@ export default function RecordScreen() {
           ) : slotsError ? (
             <View style={styles.slotsErrorBox}>
               <Text style={styles.slotsErrorText}>{slotsError}</Text>
-              <TouchableOpacity onPress={() => router.push('/(candidate)/subscribe')}>
+              <TouchableOpacity onPress={() => router.push('/(candidate)/billing')}>
                 <Text style={styles.slotsErrorLink}>Go to Billing</Text>
               </TouchableOpacity>
               <TouchableOpacity
