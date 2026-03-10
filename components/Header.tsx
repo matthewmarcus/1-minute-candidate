@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Platform, StatusBar, useWindowDimensions } from 'react-native';
+import { View, Text, Image, TouchableOpacity, Pressable, StyleSheet, Platform, StatusBar, useWindowDimensions } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
@@ -183,6 +183,12 @@ export function Header() {
 
       {/* Mobile dropdown menu */}
       {isMobile && menuOpen && (
+        <>
+          {/* Full-screen backdrop — tapping anywhere outside closes menu */}
+          <Pressable
+            style={styles.backdrop}
+            onPress={() => setMenuOpen(false)}
+          />
         <View style={styles.mobileMenu}>
           {isAdmin ? (
             <TouchableOpacity
@@ -249,6 +255,7 @@ export function Header() {
             </Text>
           </TouchableOpacity>
         </View>
+        </>
       )}
     </View>
   );
@@ -314,13 +321,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: 'Quicksand_600SemiBold',
   },
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: -9999,
+    zIndex: 98,
+  },
   mobileMenu: {
     position: 'absolute',
     top: '100%',
     right: 0,
     backgroundColor: '#0F1F5C',
     width: '100%',
-    zIndex: 1000,
+    zIndex: 99,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.15)',
   },
