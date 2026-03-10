@@ -109,6 +109,25 @@ function OverviewVideoSection({
   }
 
   if (!video) {
+    if (overviewRemaining === 0) {
+      return (
+        <View style={styles.subsection}>
+          <Text style={styles.subsectionTitle}>Overview Video</Text>
+          <View style={[styles.lockCtaContainer, { marginTop: 8, borderWidth: 1, borderColor: Colors.border, borderRadius: 10, padding: 14 }]}>
+            <Ionicons name="lock-closed-outline" size={22} color={Colors.textSecondary} style={styles.lockIcon} />
+            <Text style={[styles.subsectionTitle, { marginBottom: 4 }]}>Want to record your overview video?</Text>
+            <Text style={[styles.lockBody, { marginBottom: 12 }]}>Purchase a slot to get started.</Text>
+            <TouchableOpacity
+              style={styles.ctaButton}
+              onPress={() => router.push('/(candidate)/billing')}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.ctaButtonText}>Go to Billing — ${rerecordPrice}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
     return (
       <View style={styles.subsection}>
         <Text style={styles.subsectionTitle}>Overview Video</Text>
@@ -123,8 +142,7 @@ function OverviewVideoSection({
     );
   }
 
-  const isActive = ['submitted', 'under_review', 'approved'].includes(video.status);
-  const showLocked = overviewRemaining === 0 && isActive;
+  const showLocked = overviewRemaining === 0;
 
   return (
     <View style={styles.subsection}>
