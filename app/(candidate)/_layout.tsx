@@ -29,7 +29,7 @@ export default function CandidateLayout() {
       <Stack.Screen name="login" />
       <Stack.Screen name="record" />
       <Stack.Screen name="profile" />
-      <Stack.Screen name="subscribe" />
+      <Stack.Screen name="billing" />
       <Stack.Screen name="payment-success" />
       <Stack.Screen name="forgot-password" />
       <Stack.Screen name="reset-password" />

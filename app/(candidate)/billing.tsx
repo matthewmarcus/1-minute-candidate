@@ -129,7 +129,7 @@ export default function SubscribeScreen() {
           product_type,
           quantity,
           success_url: `${appUrl}/(candidate)/payment-success`,
-          cancel_url: `${appUrl}/(candidate)/subscribe`,
+          cancel_url: `${appUrl}/(candidate)/billing`,
         },
       });
 
