@@ -91,6 +91,18 @@ export default function CandidateRegister() {
     setPickerVisible(false);
   }
 
+  async function generateSlug(name: string): Promise<string> {
+    const base = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const { data: existing } = await supabase.from('candidates').select('slug').eq('slug', base).maybeSingle();
+    if (!existing) return base;
+    for (let i = 2; i <= 99; i++) {
+      const candidate = `${base}-${i}`;
+      const { data: taken } = await supabase.from('candidates').select('slug').eq('slug', candidate).maybeSingle();
+      if (!taken) return candidate;
+    }
+    return `${base}-${Date.now()}`;
+  }
+
   async function handleRegister() {
     if (!form.name || !form.email || !form.password || !form.officeSought) {
       Alert.alert('Error', 'Please fill in all required fields.');
@@ -98,6 +110,8 @@ export default function CandidateRegister() {
     }
 
     setLoading(true);
+
+    const slug = await generateSlug(form.name);
 
     // Form data is passed via options.data and stored in raw_user_meta_data.
     // A SECURITY DEFINER trigger (handle_new_candidate_user) reads this metadata
@@ -115,6 +129,7 @@ export default function CandidateRegister() {
           state: form.state,
           district: form.district,
           bio: form.bio,
+          slug,
         },
       },
     });

@@ -12,6 +12,7 @@ interface CivicCandidate {
   party?: string;
   candidateUrl?: string;
   candidateId?: string; // set for our own DB candidates; absent for Civic API candidates
+  candidateSlug?: string; // slug for human-readable profile URLs
 }
 
 interface Contest {
@@ -86,7 +87,7 @@ function groupCandidatesIntoContests(candidates: Candidate[]): Contest[] {
   for (const c of candidates) {
     const office = c.office_sought || 'Unknown Office';
     if (!byOffice.has(office)) byOffice.set(office, []);
-    byOffice.get(office)!.push({ name: c.name, party: c.party ?? undefined, candidateId: c.id });
+    byOffice.get(office)!.push({ name: c.name, party: c.party ?? undefined, candidateId: c.id, candidateSlug: c.slug ?? undefined });
   }
   return Array.from(byOffice.entries()).map(([office, civicCandidates]) => ({
     type: 'General',
@@ -141,7 +142,7 @@ export default function BallotScreen() {
   async function loadDemoBallot() {
     const { data, error: dbError } = await supabase
       .from('candidates')
-      .select('id, name, office_sought, party')
+      .select('id, name, office_sought, party, slug')
       .eq('profile_approved', true);
 
     if (!dbError && data && data.length > 0) {
@@ -245,7 +246,7 @@ function ContestCard({ contest }: { contest: Contest }) {
                 key={i}
                 style={[styles.candidateRow, tappable && styles.candidateRowTappable]}
                 {...(tappable
-                  ? { onPress: () => router.push(`/(voter)/candidate/${c.candidateId}`) }
+                  ? { onPress: () => router.push(`/(voter)/candidate/${c.candidateSlug || c.candidateId}`) }
                   : {})}
               >
                 <Text style={styles.candidateName}>{c.name}</Text>
