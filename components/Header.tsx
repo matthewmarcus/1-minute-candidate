@@ -24,6 +24,7 @@ const CANDIDATE_TABS = [
   { key: 'profile', label: 'My Profile', href: '/(candidate)/profile' },
   { key: 'record', label: 'Record Video', href: '/(candidate)/record' },
   { key: 'subscribe', label: 'Billing', href: '/(candidate)/billing' },
+  { key: 'settings', label: 'Account Settings', href: '/(candidate)/settings' },
 ] as const;
 
 type CandidateTabKey = typeof CANDIDATE_TABS[number]['key'];
@@ -33,6 +34,7 @@ function getActiveTab(pathname: string): CandidateTabKey | null {
   if (pathname.includes('/profile')) return 'profile';
   if (pathname.includes('/record')) return 'record';
   if (pathname.includes('/billing')) return 'subscribe';
+  if (pathname.includes('/settings')) return 'settings';
   return null;
 }
 
@@ -222,6 +224,12 @@ export function Header() {
                 onPress={() => { setMenuOpen(false); router.push('/(candidate)/billing'); }}
               >
                 <Text style={styles.mobileMenuText}>Billing</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.mobileMenuItem}
+                onPress={() => { setMenuOpen(false); router.push('/(candidate)/settings'); }}
+              >
+                <Text style={styles.mobileMenuText}>Account Settings</Text>
               </TouchableOpacity>
             </>
           ) : (
