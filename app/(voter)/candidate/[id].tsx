@@ -207,7 +207,7 @@ export default function CandidateProfileScreen() {
   return (
     <View style={styles.outerContainer}>
       <Header />
-      <PageContainer style={{ paddingHorizontal: 0 }}>
+      <PageContainer style={{ paddingHorizontal: 0, paddingTop: 16 }}>
         {/* Overview video — centered within content column */}
         {overviewVideo?.youtube_url && overviewVideo.youtube_video_id && (
           <View style={styles.overviewVideoContainer}>
